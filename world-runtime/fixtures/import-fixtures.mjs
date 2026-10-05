@@ -61,3 +61,6 @@ export function mappedCharx() {
   const module = { name: '测试模块', description: '仅合成数据', id: 'synthetic-module', lorebook: [{ key: '渡口,向导', secondkey: '夜间', content: '模块版本：夜间需要灯笼。', alwaysActive: true, selective: false, insertorder: 8, comment: '夜间通行' }], trigger: [{ type: 'lua', comment: '不执行的合成占位数据' }], regex: [{ type: 'editdisplay', in: 'sample', out: 'sample' }], cjs: '/* synthetic inert text, never evaluated */', assets: [['lamp', '', 'png']], unknownModuleValue: { keep: 42 } };
   return zip([{ name: 'card.json', bytes: JSON.stringify(v3) }, { name: 'module.risum', bytes: risum(module, [png()]) }, { name: 'assets/icon/face.png', bytes: png() }, { name: 'assets/other/unknown.dat', bytes: 'exact synthetic unknown bytes' }]);
 }
+
+// Two PCM samples, authored here; no third-party recording or media license.
+export function silentWav() { const wav=Buffer.alloc(46);wav.write('RIFF');wav.writeUInt32LE(38,4);wav.write('WAVE',8);wav.write('fmt ',12);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(8000,24);wav.writeUInt32LE(16000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(2,40);return wav; }

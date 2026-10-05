@@ -1,0 +1,2 @@
+PASS three-stage flattened identities, dedup before later allocation, restart, retry and changed-payload rejection
+PASS bounded due-event batches preserve effective time and final clock advance

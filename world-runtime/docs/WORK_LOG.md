@@ -89,3 +89,7 @@ S2-01先以真实本地HTTP复现before_generate建关系→模型读取合法ID
 S2-02先测出due=10关系/认知时态却为0。现在每个到期事件先取effectiveTime=max(当前世界时间,dueAt)，在同一advance事务的计算状态和commit写状态中先设时刻，再校验/应用delta。没有提前发布独立时钟commit。覆盖10/15锁取消/20多事件、25结束时刻、reopen、10时fork、恢复的overdue队列及第二事件写入失败整体回滚。
 
 新增run-identity小函数和一项持久namespace，不建通用框架/每类分配表。原ADR、许可与完整目标未改。Android原生/Winmac/Chromium、大媒体/生态/真实模型质量门仍open；没有push。
+
+## Linux media/import continuation — 2026-10-05
+
+Kept source172a8df/publication58562fac fixed and created feat/local-media-imports. Addressed the confirmed cover-only and immediate/base64 import gaps with local image/audio gallery, binary upload progress, worker parsing, preview acceptance, cancellation and recovery. No third-party media, external service calls, new packages, Android installation or remote writes are part of this slice. Details and remaining acceptance boundaries: MEDIA_IMPORT_SLICE.md. Initial new import-job tests failed because the implementation did not exist; then genuine filesystem/process/HTTP/DOM tests ran against the implementation. Ordinary development syntax/test-harness corrections are not claimed as product bug evidence. New independent reviews are pending.

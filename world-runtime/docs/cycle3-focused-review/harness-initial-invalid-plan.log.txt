@@ -1,0 +1,27 @@
+✖ Independent due clock: bounded batches, same-time observations, cancelled locked relation, transaction rollback, reopened branch histories (18.480634ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 133.042465
+
+✖ failing tests:
+
+test at world-runtime/docs/cycle3-focused-review/independent-time.test.mjs:10:1
+✖ Independent due clock: bounded batches, same-time observations, cancelled locked relation, transaction rollback, reopened branch histories (18.480634ms)
+  Error: Locked relation requires author action
+      at fail (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/domain-state.mjs:4:17)
+      at applyOperations (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/domain-state.mjs:336:11)
+      at applyOperations (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/domain-state.mjs:715:9)
+      at #commit (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/store.mjs:680:5)
+      at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/store.mjs:806:39
+      at #tx (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/store.mjs:282:21)
+      at WorldStore.commit (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/store.mjs:806:20)
+      at commit (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/cycle3-focused-review/independent-time.test.mjs:14:30)
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/cycle3-focused-review/independent-time.test.mjs:18:2)
+      at Test.runInAsyncScope (node:async_hooks:227:14) {
+    code: 'LOCKED_FIELD'
+  }

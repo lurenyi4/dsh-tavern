@@ -137,9 +137,56 @@ function renderLists() {
       row.append(
         button(c.name, () => createWorldDialog(c.id)),
         button("报告", () => guarded(() => cardReport(c.id)), "small"),
+        button("素材", () => guarded(() => cardMedia(c.id)), "small"),
       );
       return row;
     }),
+  );
+}
+async function cardMedia(id) {
+  const { card } = await api("/api/cards/" + id),
+    wrap = el("div", undefined, "media-gallery");
+  if (!card.assets.length)
+    wrap.append(
+      el("p", "此卡没有可预览的本地媒体，请在导入报告查看缺失或不支持的资源。"),
+    );
+  for (const a of card.assets) {
+    const item = el("figure"),
+      media = el(a.mime.startsWith("audio/") ? "audio" : "img");
+    media.src = "/assets/" + a.id;
+    if (media.tagName === "AUDIO") {
+      media.controls = true;
+      media.preload = "none";
+    } else {
+      media.alt = a.name;
+      media.loading = "lazy";
+    }
+    media.addEventListener(
+      "error",
+      () => item.append(el("p", "当前设备无法解码此媒体；原件仍保留。")),
+      { once: true },
+    );
+    item.append(
+      media,
+      el(
+        "figcaption",
+        a.name + " · " + a.mime + " · " + Math.ceil(a.size / 1024) + " KiB",
+      ),
+    );
+    wrap.append(item);
+  }
+  showDialog("本地素材 · " + card.name, wrap, [
+    button("关闭", () => $("dialog").close()),
+  ]);
+  $("dialog").addEventListener(
+    "close",
+    () => {
+      for (const media of wrap.querySelectorAll("audio")) {
+        media.pause();
+        media.removeAttribute("src");
+      }
+    },
+    { once: true },
   );
 }
 async function cardReport(id) {
@@ -274,24 +321,170 @@ $("createDemo").onclick = () =>
       b.disabled = false;
     }
   });
-$("importButton").onclick = () => $("fileInput").click();
+$("importButton").onclick = () =>
+  guarded(async () => {
+    const { jobs } = await api("/api/import-jobs");
+    const active = jobs.find(
+      (j) =>
+        !["completed", "cancelled", "failed", "interrupted"].includes(j.status),
+    );
+    if (active) {
+      showDialog(
+        "上次导入尚未完成",
+        el(
+          "p",
+          active.filename +
+            " · " +
+            active.status +
+            "。可取消后重新选择文件，已注册卡片不受影响。",
+        ),
+        [
+          button("取消上次导入", () =>
+            guarded(async () => {
+              await api("/api/import-jobs/" + active.id + "/cancel", {});
+              $("dialog").close();
+              announce("已清理上次导入，请重新选择文件");
+            }),
+          ),
+          button("关闭", () => $("dialog").close()),
+        ],
+      );
+      return;
+    }
+    $("fileInput").click();
+  });
 $("fileInput").onchange = () =>
   guarded(async () => {
     const file = $("fileInput").files[0];
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024)
-      throw new Error("浏览器导入上限20 MiB，请先缩小资源包");
+    if (file.size > 64 * 1024 * 1024) throw new Error("导入上限64 MiB");
     $("importButton").disabled = true;
+    let job,
+      cancelled = false,
+      xhr,
+      resolvePreview;
+    const onDismiss = () => {
+      cancelled = true;
+      resolvePreview?.(false);
+      xhr?.abort();
+      if (job)
+        api("/api/import-jobs/" + job.id + "/cancel", {}).catch(() => {});
+    };
     try {
-      announce("正在校验角色卡与本地素材…");
-      const base64 = await new Promise((yes, no) => {
-        const reader = new FileReader();
-        reader.onload = () => yes(String(reader.result).split(",")[1]);
-        reader.onerror = () => no(new Error("无法读取文件"));
-        reader.readAsDataURL(file);
+      job = await api("/api/import-jobs", {
+        filename: file.name,
+        size: file.size,
       });
-      const result = await api("/api/import", { filename: file.name, base64 });
+      const progress = el("progress"),
+        status = el("p", "正在上传…"),
+        previewWrap = el("div");
+      progress.max = file.size;
+      progress.value = 0;
+      previewWrap.append(status, progress);
+      const cancel = button("取消导入", () =>
+        guarded(async () => {
+          cancelled = true;
+          xhr?.abort();
+          const result = await api(
+            "/api/import-jobs/" + job.id + "/cancel",
+            {},
+          );
+          status.textContent =
+            result.status === "completed"
+              ? "已完成注册"
+              : "已取消，原有卡片不受影响";
+          $("dialog").close();
+        }),
+      );
+      showDialog("导入角色卡", previewWrap, [cancel]);
+      $("dialog").addEventListener("cancel", onDismiss);
+      $("dialog").addEventListener("close", onDismiss);
+      await new Promise((yes, no) => {
+        xhr = new XMLHttpRequest();
+        xhr.open("PUT", "/api/import-jobs/" + job.id + "/upload");
+        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+        xhr.upload.onprogress = (e) => {
+          progress.value = e.loaded;
+          status.textContent =
+            "上传 " +
+            Math.min(100, Math.round((e.loaded / file.size) * 100)) +
+            "%";
+        };
+        xhr.onload = () =>
+          xhr.status < 300 ? yes() : no(new Error("上传失败，请重新选择文件"));
+        xhr.onerror = () => no(new Error("上传中断，请重新选择文件"));
+        xhr.onabort = () => no(new Error("导入已取消"));
+        xhr.send(file);
+      });
+      while (!cancelled) {
+        job = await api("/api/import-jobs/" + job.id);
+        if (
+          job.status === "ready" ||
+          job.status === "failed" ||
+          job.status === "cancelled"
+        )
+          break;
+        status.textContent = "正在校验资源与生成迁移报告…";
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      if (cancelled || job.status === "cancelled") return;
+      if (job.status !== "ready")
+        throw new Error(job.error?.message || "导入失败");
+      status.textContent =
+        "预览 · " +
+        job.preview.card.name +
+        " · " +
+        job.preview.card.assets.length +
+        "个本地媒体";
+      progress.remove();
+      previewWrap.append(el("p", job.preview.card.firstMessage));
+      const gallery = el("div", undefined, "media-gallery");
+      for (const a of job.preview.card.assets) {
+        const item = el("figure"),
+          media = el(a.mime.startsWith("audio/") ? "audio" : "img");
+        media.src = "/api/import-jobs/" + job.id + "/assets/" + a.id;
+        if (a.mime.startsWith("audio/")) {
+          media.controls = true;
+          media.preload = "none";
+        } else {
+          media.alt = a.name;
+          media.loading = "lazy";
+        }
+        item.append(media, el("figcaption", a.name));
+        gallery.append(item);
+      }
+      previewWrap.append(gallery);
+      for (const r of job.preview.report) {
+        const item = el(
+          "div",
+          r.status + " · " + r.field + " · " + r.message,
+          "report-item",
+        );
+        previewWrap.append(item);
+      }
+      const accepted = await new Promise((resolve) => {
+        resolvePreview = resolve;
+        const accept = button("接受并导入", () => resolve(true), "primary");
+        const reject = button("取消导入", () => resolve(false));
+        $("dialogActions").replaceChildren(reject, accept);
+      });
+      if (!accepted) {
+        await api("/api/import-jobs/" + job.id + "/cancel", {});
+        $("dialog").close();
+        announce("已取消导入");
+        return;
+      }
+      $("dialogActions").replaceChildren();
+      status.textContent = "正在保存原件与资源…";
+      const completed = await api("/api/import-jobs/" + job.id + "/accept", {});
+      if (completed.status !== "completed")
+        throw new Error(completed.error?.message || "导入未完成");
+      const result = completed.result;
       await refreshLists();
+      if (cancelled) {
+        announce("导入已完成，卡片已保存在本地");
+        return;
+      }
       const wrap = el("div");
       wrap.append(
         el(
@@ -330,7 +523,13 @@ $("fileInput").onchange = () =>
         ),
       ]);
       announce("导入完成，请查看逐项迁移报告。");
+    } catch (error) {
+      if (job)
+        await api("/api/import-jobs/" + job.id + "/cancel", {}).catch(() => {});
+      if (!cancelled) throw error;
     } finally {
+      $("dialog").removeEventListener("cancel", onDismiss);
+      $("dialog").removeEventListener("close", onDismiss);
       $("importButton").disabled = false;
       $("fileInput").value = "";
     }

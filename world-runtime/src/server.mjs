@@ -1,4 +1,5 @@
 import http from "node:http";
+import { ImportJobs } from "./import-jobs.mjs";
 import { readFile, mkdir, writeFile, rm, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -138,7 +139,7 @@ export async function startServer({
     JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }),
     { mode: 0o600 },
   );
-  let store, projection, server;
+  let store, projection, server, imports;
   const live = new Map(),
     jobs = new Set(),
     auto = new Map(),
@@ -463,6 +464,7 @@ export async function startServer({
         await drain(w.id, b.id);
       }
     }
+    imports = await ImportJobs.open(dataDir);
     server = http.createServer(async (req, res) => {
       res.setHeader("x-content-type-options", "nosniff");
       res.setHeader("referrer-policy", "no-referrer");
@@ -501,6 +503,31 @@ export async function startServer({
             toolCallsEnabled: false,
             extraParameterNames: Object.keys(config.extraParameters || {}),
           });
+        if (path === "/api/import-jobs") {
+          if (method === "GET") return json(res, 200, { jobs: imports.list() });
+          if (method === "POST")
+            return json(res, 201, await imports.create(await body(req)));
+        }
+        if (parts[0] === "api" && parts[1] === "import-jobs" && parts[2]) {
+          const id = parts[2];
+          if (method === "GET" && parts.length === 3)
+            return json(res, 200, imports.get(id));
+          if (method === "GET" && parts[3] === "assets" && parts.length === 5) {
+            const asset = imports.asset(id, parts[4]);
+            res.writeHead(200, {
+              "content-type": asset.mime,
+              "content-length": asset.size,
+              "cache-control": "no-store",
+            });
+            return res.end(asset.bytes);
+          }
+          if (method === "PUT" && parts[3] === "upload")
+            return json(res, 202, await imports.upload(id, req));
+          if (method === "POST" && parts[3] === "accept")
+            return json(res, 200, await imports.accept(id));
+          if (method === "POST" && parts[3] === "cancel")
+            return json(res, 200, await imports.cancel(id));
+        }
         if (method === "GET" && path === "/api/cards")
           return json(res, 200, { cards: await listCards(dataDir) });
         if (
@@ -1051,6 +1078,7 @@ export async function startServer({
         stopped = true;
         clearInterval(timer);
         for (const r of live.values()) r.controller.abort();
+        await imports.close();
         await Promise.allSettled([...jobs]);
         await new Promise((r) => server.close(r));
         await projection.close();
@@ -1059,6 +1087,7 @@ export async function startServer({
       },
     };
   } catch (e) {
+    await imports?.close();
     await projection?.close();
     store?.close();
     await rm(lock, { recursive: true, force: true });

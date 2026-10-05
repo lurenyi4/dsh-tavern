@@ -71,3 +71,7 @@ Git ls-remote目标仓库因shell Git无认证失败；主线程另查连接器�
 
 ## 第三轮修后待复核
 cycle2新Major（非实体暂存ID与事件有效时间）已补真实HTTP/SQLite红绿回归，统一run操作身份及原子有效时刻实现。两份cycle2 FAIL报告/独立日志保留。此处不自行标独审通过；以新冻结SHA上的两组全新复核为准。完整多端、真实UI、媒体/大导入、广卡与真实质量成本门保持原状态。
+
+## Linux media/import slice
+
+Separate branch from source172a8df: CAP-08 now has all validated local image/audio previews, T-09 has binary progress, worker parsing, explicit preview/accept, cancel/close, real-process interruption recovery and conservative orphan cleanup. Final local validation: 171 unit and 10 actual HTTP/DOM tests pass. See MEDIA_IMPORT_SLICE.md for precise implemented boundaries and evidence. Broader real licensed cards, full media/HTML behaviors, mobile memory and real device/browser acceptance remain open. These tests do not self-approve the new slice; two fresh independent reviews are pending.

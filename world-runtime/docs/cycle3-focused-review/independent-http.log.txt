@@ -1,0 +1,10 @@
+{"calls":1,"suppliedIds":{"relations":["d1cf8476-cfd0-5b8e-989f-465abe8c4b90"],"facts":["71eeb080-75cb-5229-8ec8-8386209a4621"],"goals":["8e0fb72a-4147-532c-ad8f-6c8e85f3a259","12d390f6-1a33-5300-9bb9-40f23195f885"],"plotThreads":["8befb48c-f511-58cb-af1d-a1289f51b2e7"],"schedules":["3da29175-d109-5c04-b4dd-c78c83755be5"]},"committedScenes":1,"retryCommitted":true}
+✔ Independent HTTP: input facts/player schedule + pre relations/goal/plot retain exact supplied IDs through failed write/reopen/retry (230.097212ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 347.377098

@@ -1,0 +1,43 @@
+✔ real HTTP lifecycle: imports, idempotency, cancellation, schedules, privacy, fork, backup and ACK recovery (842.760903ms)
+✔ interrupted durable draft settles on explicit retry without a new model call (65.071736ms)
+✔ bounded autonomy changes due NPC state without chat and pauses on player decisions (3911.127044ms)
+✖ Chromium desktop and mobile: real story world user journeys (291.24482ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4948.583441
+
+✖ failing tests:
+
+test at world-runtime/test/e2e-browser.mjs:48:1
+✖ Chromium desktop and mobile: real story world user journeys (291.24482ms)
+  browserType.launch: Target page, context or browser has been closed
+  Browser logs:
+  
+  <launching> /usr/bin/chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --disable-dev-shm-usage --user-data-dir=/tmp/playwright_chromiumdev_profile-p4U9X8 --remote-debugging-pipe --no-startup-window
+  <launched> pid=463
+  [pid=463][err] [463:463:1005/220247.775774:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/agent/.config/chromium/Crash Reports/settings.dat: Read-only file system (30)
+  [pid=463][err] [463:463:1005/220247.775935:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/agent/.config/chromium/Crash Reports/settings.dat: Read-only file system (30)
+  [pid=463][err] [463:463:1005/220247.837744:FATAL:chrome/browser/process_singleton_posix.cc:297] Check failed: . socket() failed: Operation not permitted (1)
+  [pid=463][err] [1005/220247.837996:ERROR:third_party/crashpad/crashpad/util/linux/scoped_ptrace_attach.cc:27] ptrace: Operation not permitted (1)
+  Call log:
+  [2m  - <launching> /usr/bin/chromium --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --disable-dev-shm-usage --user-data-dir=/tmp/playwright_chromiumdev_profile-p4U9X8 --remote-debugging-pipe --no-startup-window[22m
+  [2m  - <launched> pid=463[22m
+  [2m  - [pid=463][err] [463:463:1005/220247.775774:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/agent/.config/chromium/Crash Reports/settings.dat: Read-only file system (30)[22m
+  [2m  - [pid=463][err] [463:463:1005/220247.775935:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/agent/.config/chromium/Crash Reports/settings.dat: Read-only file system (30)[22m
+  [2m  - [pid=463][err] [463:463:1005/220247.837744:FATAL:chrome/browser/process_singleton_posix.cc:297] Check failed: . socket() failed: Operation not permitted (1)[22m
+  [2m  - [pid=463][err] [1005/220247.837996:ERROR:third_party/crashpad/crashpad/util/linux/scoped_ptrace_attach.cc:27] ptrace: Operation not permitted (1)[22m
+  [2m  - [pid=463] <gracefully close start>[22m
+  [2m  - [pid=463] <kill>[22m
+  [2m  - [pid=463] <will force kill>[22m
+  [2m  - [pid=463] <process did exit: exitCode=null, signal=SIGABRT>[22m
+  [2m  - [pid=463] starting temporary directories cleanup[22m
+  [2m  - [pid=463] finished temporary directories cleanup[22m
+  [2m  - [pid=463] <gracefully close end>[22m
+  
+      at launchFixture (/workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/e2e-browser.mjs:30:41)
+      at async TestContext.<anonymous> (/workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/e2e-browser.mjs:49:10)

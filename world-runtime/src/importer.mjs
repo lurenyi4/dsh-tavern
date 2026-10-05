@@ -90,7 +90,7 @@ function normalize(raw, report, normalizerVersion=2) {
   if ([card.description, card.firstMessage, ...card.alternateGreetings].some(x => /<[^>]+>/.test(x))) add(report, 'card.html', 'blocked', '卡片 HTML 按纯文本呈现，不执行脚本或外部素材');
   return card;
 }
-function prepare({ filename, bytes, normalizerVersion }) {
+export function prepareCard({ filename, bytes, normalizerVersion=2 }) {
   const report = [], rawResources = new Map(), preservedFiles = new Map(), mediaFiles = new Map(); let raw, archive, expandedBytes = 0;
   const extension = path.extname(filename).toLowerCase();
   if (extension === '.json') raw = parseJson(bytes);
@@ -162,34 +162,38 @@ async function rootDirectories(dataDir, create = false) {
   if (typeof dataDir !== 'string' || !dataDir) fail('INVALID_STORAGE', '缺少数据目录');
   const root = path.resolve(dataDir); await checkedDirectory(root, create); await checkedDirectory(path.join(root, 'cards'), create); if (create) await checkedDirectory(path.join(root, 'assets'), true); return root;
 }
-export async function importCard({ filename, bytes, dataDir, normalizerVersion=2 }) {
+export async function importCard({ filename, bytes, dataDir, normalizerVersion=2, prepared: supplied, signal, onProgress=()=>{} }) {
   if(![1,2].includes(normalizerVersion))fail('UNSUPPORTED_IMPORT_VERSION','Unsupported card normalization version');
   filename = sourceName(filename);
   if (!(bytes instanceof Uint8Array)) fail('INVALID_INPUT', '导入内容必须为字节数组');
   if (!bytes.length || bytes.length > IMPORT_LIMITS.rawBytes) fail('IMPORT_LIMIT', '导入大小必须为 1 字节至 64 MiB');
   if (typeof dataDir !== 'string' || !dataDir) fail('INVALID_STORAGE', '缺少数据目录');
-  const input = Buffer.from(bytes), prepared = prepare({ filename, bytes: input, normalizerVersion }), root = path.resolve(dataDir), previous = LOCKS.get(root) ?? Promise.resolve();
+  const input = Buffer.from(bytes), prepared = supplied ?? prepareCard({ filename, bytes: input, normalizerVersion }), root = path.resolve(dataDir), previous = LOCKS.get(root) ?? Promise.resolve();
   let release; const gate = new Promise(resolve => { release = resolve; }); LOCKS.set(root, gate); await previous.catch(() => {});
-  let staging;
+  let staging; const createdAssets=[]; let registered=false;
+  const checkpoint=stage=>{ signal?.throwIfAborted(); onProgress(stage); signal?.throwIfAborted(); };
   try {
+    checkpoint("staging");
     await rootDirectories(dataDir, true);
     const target = path.join(root, 'cards', prepared.card.id);
     try { const result = await readCard(root, prepared.card.id); add(result.report, 'original', 'preserved', '相同 SHA256 已导入，复用已注册卡片'); return result; } catch (error) { if (error.code !== 'CARD_NOT_FOUND') throw error; }
     staging = path.join(root, 'cards', `.staging-${randomUUID()}`); await mkdir(staging, { mode: 0o700 }); await mkdir(path.join(staging, 'resources'), { mode: 0o700 });
     await writeDurable(path.join(staging, 'original'), input);
     const written = new Set();
-    for (const value of prepared.rawResources.values()) { const id = hash(value); if (!written.has(id)) { await writeDurable(path.join(staging, 'resources', id), value); written.add(id); } }
+    for (const value of prepared.rawResources.values()) { checkpoint("resources"); const id = hash(value); if (!written.has(id)) { await writeDurable(path.join(staging, 'resources', id), value); written.add(id); } }
     await writeDurable(path.join(staging, 'card.json'), JSON.stringify(prepared.card)); await writeDurable(path.join(staging, 'report.json'), JSON.stringify(prepared.report)); await syncDirectory(path.join(staging, 'resources')); await syncDirectory(staging);
     for (const [id, value] of prepared.mediaFiles) {
+      checkpoint("resources");
       const destination = path.join(root, 'assets', id);
       const pendingMedia = path.join(staging, `media-${id}`); await writeDurable(pendingMedia, value);
-      try { await link(pendingMedia, destination); } catch (error) { if (error.code !== 'EEXIST') throw error; if (hash(await safeRead(destination)) !== id) fail('CORRUPT_STORAGE', '已存在资源哈希不匹配'); }
+      try { await link(pendingMedia, destination); createdAssets.push(destination); } catch (error) { if (error.code !== 'EEXIST') throw error; if (hash(await safeRead(destination)) !== id) fail('CORRUPT_STORAGE', '已存在资源哈希不匹配'); }
       await rm(pendingMedia);
     }
     await syncDirectory(path.join(root, 'assets')); await syncDirectory(staging);
-    try { await rename(staging, target); staging = null; } catch (error) { if (!['EEXIST', 'ENOTEMPTY'].includes(error.code)) throw error; return await readCard(root, prepared.card.id); }
+    checkpoint("registering");
+    try { await rename(staging, target); staging = null; registered=true; } catch (error) { if (!['EEXIST', 'ENOTEMPTY'].includes(error.code)) throw error; return await readCard(root, prepared.card.id); }
     await syncDirectory(path.join(root, 'cards')); return { card: prepared.card, report: prepared.report };
-  } finally { if (staging) await rm(staging, { recursive: true, force: true }); release(); if (LOCKS.get(root) === gate) LOCKS.delete(root); }
+  } finally { try { if (staging) await rm(staging, { recursive: true, force: true }); if(!registered) for(const asset of createdAssets) await rm(asset,{force:true}); } finally { release(); if (LOCKS.get(root) === gate) LOCKS.delete(root); } }
 }
 export async function readCard(dataDir, id) {
   checkId(id);
@@ -217,4 +221,22 @@ export async function assetPath(dataDir, assetId) {
     const media = sniffMedia(bytes); if (!media) fail('UNSAFE_STORAGE', '资源不是允许的图片/音频');
     return { path: absolutePath, mime: media.mime, size: bytes.length, sha256: assetId };
   } catch (error) { if (error.code === 'ENOENT') fail('ASSET_NOT_FOUND', '可展示资源不存在'); throw error; }
+}
+
+// Called only during server startup after its exclusive data-directory lock.
+export async function recoverImportStorage(dataDir) {
+  const root=await rootDirectories(dataDir,true), referenced=new Set();
+  for(const card of await listCards(root))for(const asset of card.assets)referenced.add(asset.id);
+  let staging=0,orphanAssets=0;
+  for(const entry of await readdir(path.join(root,'cards'),{withFileTypes:true})){
+    if(!/^\.staging-[a-f0-9-]{36}$/.test(entry.name))continue;
+    if(!entry.isDirectory()||entry.isSymbolicLink())fail('UNSAFE_STORAGE','临时导入目录异常');
+    await rm(path.join(root,'cards',entry.name),{recursive:true});staging++;
+  }
+  for(const entry of await readdir(path.join(root,'assets'),{withFileTypes:true})){
+    if(!HASH.test(entry.name)||referenced.has(entry.name))continue;
+    if(!entry.isFile()||entry.isSymbolicLink())fail('UNSAFE_STORAGE','资源文件异常');
+    await rm(path.join(root,'assets',entry.name));orphanAssets++;
+  }
+  return {staging,orphanAssets};
 }
