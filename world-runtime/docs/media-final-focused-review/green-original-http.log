@@ -1,0 +1,2 @@
+{"case":"worker-invalid-json-plus-cleanup-failure","result":{"http":200,"id":"d2a10cd7-da59-4560-947b-9e208854e236","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"INVALID_JSON","message":"card.json 不是有效 JSON"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}},"faults":1}
+{"case":"retry-cleanup","result":{"http":200,"id":"d2a10cd7-da59-4560-947b-9e208854e236","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"INVALID_JSON","message":"card.json 不是有效 JSON"}}}

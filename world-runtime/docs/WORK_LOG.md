@@ -105,3 +105,7 @@ Read both080b9dd reviews. Reproduced all three full-review findings as RED with 
 ## Worker failure ownership — 2026-10-05
 
 Both091ee8f independent reviews identified the same adjacent worker-completion error overwrite. The new real HTTP probe first reproduced INVALID_JSON being replaced by cleanup EBUSY. Reused one small failJob method for receive and worker completion: preserve the first primary error, finalize unregistered failure, release prepared data, then best-effort close/cleanup and journal save with separate warnings. No admission limits, canonical world behavior or storage architecture changed. The HTTP probe is green; new transient/persistent cleanup and journal-failure combinations verify INVALID_JSON through retry and server-data reopen. Original reviews are retained in media-091-focused-review and media-091-full-review. New independent approvals remain required before publication.
+
+## Linux media slice approved for branch publication — 2026-10-05
+
+The new focused and full reviews both PASS source9bc7960, no block/critic/major. Full review's optional importer double-storage-fault cleanup minor is recorded in MEDIA_IMPORT_SLICE.md and CURRENT_VALIDATION.json, with recovery evidence retained. This documentation-only follow-up preserves the reviewed product source/tests exactly. Branch publication is authorized; no merge/main update, deployment or complete-product claim is included.

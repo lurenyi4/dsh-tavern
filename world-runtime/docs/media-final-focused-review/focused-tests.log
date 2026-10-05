@@ -1,0 +1,34 @@
+✔ binary upload previews without registration, explicit accept preserves exact original and duplicate identity (128.825639ms)
+✔ preview cancellation and malformed upload leave existing content intact and permit retry (184.263937ms)
+✔ incomplete transfer fails atomically and startup records interrupted imports (12.954626ms)
+✔ resource preview is local, cancellation removes staging and startup cleans only unreferenced media (98.32481ms)
+✔ cancelling an in-flight upload releases the slot and does not register partial bytes (4.591072ms)
+✔ a 21 MiB CharX uploads in bounded chunks, retains unknown binary and remains usable after reopen (1426.804668ms)
+✔ process termination after preview leaves an interrupted job and no partially registered card (168.531077ms)
+✔ cancel before atomic publication cleans only newly created resources and keeps earlier card media (29.84054ms)
+✔ ready-record EIO releases upload and terminal cancel retries a transient cleanup failure (70.308814ms)
+✔ acceptance rejects media duplication beyond the bounded backup closure without affecting existing cards (1932.307329ms)
+✔ dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/media-publication.test.mjs (343.975671ms)
+{"case":"transient cancel cleanup, then normal record retention","fault":true,"recordRetained":false,"uploadAfterRestart":false,"remainingUploadBytes":0}
+✔ dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/storage-fault-lifecycle.test.mjs (352.092782ms)
+✔ upload writeFile failure retains primary error through cleanup failure and restart (28.163573ms)
+✔ upload sync failure retains primary error through cleanup failure and restart (11.086511ms)
+✔ upload close failure retains primary error through cleanup failure and restart (11.369215ms)
+{"returnedError":{"code":"EIO","message":"Upload fsync failed"},"status":"failed","storedError":{"code":"EIO","message":"Upload fsync failed"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}}
+Explicit cancel recovers slot and removes upload
+✔ dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/upload-storage-fault.test.mjs (165.966473ms)
+{"case":"worker-invalid-json-plus-cleanup-failure","result":{"http":200,"id":"2d6f4a54-8ddc-4af1-9a6f-74a721fd3477","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"INVALID_JSON","message":"card.json 不是有效 JSON"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}},"faults":1}
+{"case":"retry-cleanup","result":{"http":200,"id":"2d6f4a54-8ddc-4af1-9a6f-74a721fd3477","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"INVALID_JSON","message":"card.json 不是有效 JSON"}}}
+✔ dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/worker-error-cleanup.test.mjs (356.278285ms)
+✔ worker INVALID_JSON survives cleanup_once and retry/reopen (123.241391ms)
+✔ worker INVALID_JSON survives cleanup_persistent and retry/reopen (101.775928ms)
+✔ worker INVALID_JSON survives save_once and retry/reopen (70.883123ms)
+✔ worker INVALID_JSON survives save_persistent and retry/reopen (75.110182ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4197.107114

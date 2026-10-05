@@ -1,0 +1,7 @@
+{"mode":"rm_once","rmFaults":1,"saveFaults":0,"retryHTTP":200,"primary":"INVALID_JSON","status":"failed","uploadRemoved":true,"cards":0}
+{"mode":"rm_persistent","rmFaults":2,"saveFaults":0,"retryHTTP":200,"primary":"INVALID_JSON","status":"failed","uploadRemoved":true,"cards":0}
+{"mode":"write_once","rmFaults":0,"saveFaults":1,"retryHTTP":200,"primary":"INVALID_JSON","status":"failed","persistenceWarning":"ENOSPC","uploadRemoved":true,"cards":0}
+{"mode":"write_persistent","rmFaults":0,"saveFaults":2,"retryHTTP":400,"primary":"INVALID_JSON","status":"failed","persistenceWarning":"ENOSPC","uploadRemoved":true,"cards":0}
+{"mode":"rename_once","rmFaults":0,"saveFaults":1,"retryHTTP":200,"primary":"INVALID_JSON","status":"failed","persistenceWarning":"EIO","uploadRemoved":true,"cards":0}
+{"mode":"rename_persistent","rmFaults":0,"saveFaults":2,"retryHTTP":400,"primary":"INVALID_JSON","status":"failed","persistenceWarning":"EIO","uploadRemoved":true,"cards":0}
+{"mode":"combined","rmFaults":2,"saveFaults":2,"retryHTTP":400,"primary":"INVALID_JSON","status":"failed","persistenceWarning":"ENOSPC","uploadRemoved":true,"cards":0}

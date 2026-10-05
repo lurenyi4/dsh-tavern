@@ -83,3 +83,7 @@ The f26cc35 slice was rejected by both independent reviewers. Their normal large
 ### Normalized-content follow-up
 
 The080b9dd full review found an ordinary normalized-card complexity mismatch plus upload cleanup lifecycle gaps. All three were reproduced before repair. A common normalized policy now governs preview/registration/read/world/backup/restore; normal5000-entry lorebooks and other valid structures survive complete HTTP backup/restore/reopen. Over-budget expansion is rejected before acceptance, without dropping raw values. Cleanup ownership survives history rotation and primary IO errors survive cleanup failures. Exact threshold tests and finite-budget rationale are documented in NORMALIZED_CONTENT_CONTRACT.md. A new independent review pair is still required; all original device/real-community-card/model-quality gates remain open.
+
+### Final Linux media-slice decision
+
+Both new reviews PASS9bc7960 (media-final-focused-review and media-final-full-review). The worker/receive primary-error issue is closed. One optional importer rename-plus-cleanup double-fault minor remains documented; startup clears its temporary leftovers, and no registered-data damage was observed. This closes the reviewed Linux slice gate only; earlier “pending” statements are historical. Full Android/native/device/browser/community-card/model-quality goals remain open.

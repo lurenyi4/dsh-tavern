@@ -1,6 +1,6 @@
 {
   "date": "2026-10-05",
-  "stage": "shared worker/receive failure finalization freeze; two new independent reviews pending",
+  "stage": "Linux media slice: both independent reviews PASS; one accepted non-blocking registration-cleanup minor",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
   "node": "24.19.0",
   "runtime": "0.1.5-rc.2",
@@ -99,5 +99,11 @@
     "current-validation/worker-failure-http-green.txt",
     "current-validation/worker-failure-unit.txt",
     "current-validation/worker-failure-http-dom.txt"
-  ]
+  ],
+  "reviewed_source_commit": "9bc7960ef9bf5c1165df11c908e7f58659911581",
+  "independent_reviews": [
+    "media-final-focused-review/REVIEW.md",
+    "media-final-full-review/REVIEW.md"
+  ],
+  "known_issue": "Registration rename EIO plus staging cleanup EBUSY can replace primary diagnostic and retain unreferenced staging/assets until restart; no registered-card corruption observed."
 }
