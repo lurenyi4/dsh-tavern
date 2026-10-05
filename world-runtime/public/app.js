@@ -690,6 +690,18 @@ function renderActive() {
   $("draftCard").hidden = !here;
   if (here) $("draftText").textContent = a.text || "正在等待正文…";
 }
+function runStatusMessage(run) {
+  const cancelled = run.status === "cancelled";
+  const parts = [
+    cancelled
+      ? "已取消，未提交草稿不会改变世界。"
+      : run.error?.message || "这次草稿没有改变世界。",
+  ];
+  if (cancelled && run.error?.message) parts.push(run.error.message);
+  if (run.persistenceWarning?.message)
+    parts.push(run.persistenceWarning.message);
+  return { message: parts.join(" "), warning: !!run.persistenceWarning };
+}
 function renderRuns() {
   if (state.viewPending) {
     $("runHistory").replaceChildren();
@@ -700,7 +712,8 @@ function renderRuns() {
   );
   $("runHistory").replaceChildren(
     ...runs.slice(0, 8).map((r) => {
-      const d = el("details");
+      const d = el("details"),
+        outcome = runStatusMessage(r);
       d.append(
         el(
           "summary",
@@ -710,10 +723,11 @@ function renderRuns() {
             interrupted: "重启后已暂停",
             draft: "未提交草稿",
           }[r.status] +
+            (outcome.warning ? " · 状态尚未保存" : "") +
             " · " +
             new Date(r.updatedAt).toLocaleTimeString(),
         ),
-        el("p", r.error?.message || "这次草稿没有改变世界。"),
+        el("p", outcome.message),
       );
       if (r.draft) d.append(el("pre", r.draft));
       if (r.canRetrySettlement)
@@ -1170,13 +1184,11 @@ function watchRun(token, data) {
     );
   });
   a.stream.addEventListener("cancelled", (e) => {
-    const outcome = e.data ? JSON.parse(e.data) : {};
-    if (state.active === a)
-      finishRun(
-        outcome.persistenceWarning?.message ||
-          "已取消，未提交草稿不会改变世界。",
-        !!outcome.persistenceWarning,
-      );
+    const outcome = runStatusMessage({
+      ...(e.data ? JSON.parse(e.data) : {}),
+      status: "cancelled",
+    });
+    if (state.active === a) finishRun(outcome.message, outcome.warning);
   });
   a.stream.addEventListener("error", (e) => {
     if (state.active !== a) return;

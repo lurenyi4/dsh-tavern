@@ -1,0 +1,9 @@
+# Cancelled run status in SSE and history
+
+The ordinary e8a2402 functional review confirmed a pure-DOM rendering defect: an unsaved cancellation warning arrived in the snapshot, but renderRuns ignored it. A reopened cancelled run does not reconnect SSE, so the warning disappeared from the user's view. The original report, test and logs are retained in run-status-ui-review.
+
+One runStatusMessage formatter now provides the cancellation explanation and persistence warning to both the live cancelled event and history renderer. The history summary labels an unresolved state as “状态尚未保存”; expanded details retain the neutral explanation that uncommitted drafts did not change the world, any separate run error, the persistence warning and the draft. Normally persisted cancellation has no unsaved warning. Retry eligibility remains the supplied snapshot decision.
+
+The original isolated DOM contract first reproduced one failure and one pass. After repair five pure-DOM/function contracts pass: live warning, snapshot warning, loadWorld re-entry without reconnect with/without a warning, and normally saved cancellation through SSE. These tests extract actual app functions and render actual DOM nodes; their API values are local fixtures, not induced network/storage failures or a real-browser visual claim. The existing ordinary gates also pass220unit/10HTTP+DOM.
+
+Scope remains queued-start cancellation persistence visibility. The older already-running launch catch can still fail to surface its cancellation save error in the same way; the e8 review identified that as an adjacent static limitation, not a newly reproduced regression. This UI-only repair does not claim to close that broader limitation and does not add experiments for it. The interrupted earlier full review remains incomplete; this candidate requires new ordinary quality/function review. No remote push, ADR change or original multi-platform/product completion is included.

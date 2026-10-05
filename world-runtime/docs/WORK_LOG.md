@@ -129,3 +129,7 @@ The bd9a050 full review was interrupted by platform safety checking and did not 
 ## Deferred cancellation diagnostic correction — 2026-10-05
 
 Read the queued-work focused and ordinary functional reviews. Addressed the latter's static P2 using a small cancellation outcome helper: persistence rejection no longer skips terminal notification, and persisted:false/RUN_PERSISTENCE remains visible in the existing live view, reconnect response, UI and shutdown warnings. Added only function-level return/rejection contracts with local storage substitutes, plus the unchanged ordinary regression gates. No network-fault reproduction or blocked script was executed. Reports are preserved under queued-outcome-*-review. Current candidate is not approved or pushed; interrupted earlier full review status remains unchanged.
+
+## Run-history warning continuity — 2026-10-05
+
+Read e8's ordinary functional report and permitted pure-DOM contract. Reproduced the snapshot warning omission as one RED. Reused one UI formatter for live cancellation and history, with an explicit unsaved summary label and preserved independent error/draft content. Added loadWorld leave/re-entry contracts that verify no terminal SSE reattachment is needed, and a normal saved-cancellation negative control. Product modification is app.js only. The older running-launch storage-warning limitation remains a documented static boundary; no new network/storage fault experiment or blocked script was used. New ordinary independent reviews remain pending.

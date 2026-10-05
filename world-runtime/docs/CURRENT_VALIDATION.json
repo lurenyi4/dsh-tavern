@@ -1,12 +1,12 @@
 {
   "date": "2026-10-05",
-  "stage": "queued cancellation outcome visibility freeze; ordinary independent quality/function reviews pending",
+  "stage": "shared run-history/SSE warning display freeze; new ordinary quality/function reviews pending",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
   "node": "24.19.0",
   "runtime": "0.1.5-rc.2",
   "unit": {
-    "tests": 215,
-    "pass": 215,
+    "tests": 220,
+    "pass": 220,
     "fail": 0,
     "skipped": 0
   },
@@ -43,7 +43,7 @@
     "world-runtime/src/storage-limits.mjs": "8a5be24e9d9915b306c2a99b080fb1290df731aa45a19b82edc68adbfad7b9c9",
     "world-runtime/src/store-test-support.mjs": "ee2f4f07f36a9304a2f69a540e73c8a8e0419b1f8e6cacbceb09bb6bee6a5ef1",
     "world-runtime/src/store.mjs": "ad45400a8a8d8083ff051177fc7f4eb3e62141f70c79d2f3b0090fb72652ad13",
-    "world-runtime/public/app.js": "57fb3ad9e21a7c92f0a0bf3aa107daace539496f5a0136380cc88b6070893ced",
+    "world-runtime/public/app.js": "a738f79977de2ba82a42838403e8539f8748ef905f3d34beaccb713c8d5a8558",
     "world-runtime/public/favicon.svg": "bd110874912c63c3375fb5b2634c661cf0230e2322a49a87eaeeae743da405ca",
     "world-runtime/public/index.html": "5f5f98088c9d90095b7a17b3dab204a6b5858454669fb2f9a2fc69ae93599500",
     "world-runtime/public/styles.css": "8b6a17c4712c56cfe4f3a176793d51a729db62dd0232e4a2ee854612213383da",
@@ -70,6 +70,7 @@
     "world-runtime/test/queued-work.test.mjs": "e77be03492ce045a7762d936e5e6890bc7d2c4196c428e12324bac7e9bc3d85b",
     "world-runtime/test/review-fixes.test.mjs": "51f0b258de7b9fb06f67c517a5653281779b4d138771e662c542d0125de2296b",
     "world-runtime/test/run-identity-time.test.mjs": "21bca8541c366fd00503efb92102c87acf444414b63cb5f07662d21f4382419f",
+    "world-runtime/test/run-outcome-dom.test.mjs": "a74549d66c496c4d4be740aa6a8421a1c6eb356e9bd6946fbdf6a25497a3260b",
     "world-runtime/test/schema-migration.test.mjs": "a4b5a2baded6bb47d070b739162adbf77dece67363a461ee0b22dcf361460c1c",
     "world-runtime/test/server-crash.test.mjs": "3a503ab1c03a8f223e49e496547ccb168ab66e4becc72e95b19186df4031bb1a",
     "world-runtime/test/server.test.mjs": "fb408019483f6ac5decfddd55fc934be829af7697e690178920d13d5c63a56dd",
@@ -97,12 +98,14 @@
   "logical_database_version": 2,
   "ci": "workflow added; not executed remotely",
   "repair_base_commit": "12b0f306cde8a200ff7e200aa125419639c40bcc",
-  "base_commit": "2a9d6ad1ae869fbb81b18ba151daa58b19912b58",
+  "base_commit": "e8a24028145dea3de4c71ab7503726321a2227ab",
   "reviewed_publication_candidate": "58562fac0cd308028000404cc4e05a1ed45a6d54",
   "evidence": [
-    "current-validation/cancel-outcome-unit.txt",
-    "current-validation/cancel-outcome-http-dom.txt",
-    "DEFERRED_RUN_OWNERSHIP.md"
+    "current-validation/run-status-dom-red.txt",
+    "current-validation/run-status-dom-green.txt",
+    "current-validation/run-status-unit.txt",
+    "current-validation/run-status-http-dom.txt",
+    "RUN_STATUS_UI.md"
   ],
   "known_issue": "Registration rename EIO plus staging cleanup EBUSY can replace primary diagnostic and retain unreferenced staging/assets until restart; no registered-card corruption observed.",
   "previous_reviewed_source_commit": "9bc7960ef9bf5c1165df11c908e7f58659911581",
@@ -116,5 +119,8 @@
     "run_url": "https://github.com/lurenyi4/dsh-tavern/actions/runs/37331115093"
   },
   "prior_full_review_status": "bd9a050 full review interrupted by platform safety checking; incomplete and not PASS; blocked dynamic work not retried",
-  "prior_ordinary_review_status": "2a9d6ad focused normal-function PASS; ordinary functional review requested static P2 cancellation-error visibility correction"
+  "prior_ordinary_review_status": "e8a2402 ordinary full review requested one pure-DOM history-warning correction; not publication approval",
+  "known_static_limitations": [
+    "Already-running launch cancellation save-error visibility is not covered by the queued-start outcome guarantee; not dynamically investigated in this UI repair."
+  ]
 }

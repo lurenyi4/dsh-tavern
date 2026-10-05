@@ -1,0 +1,14 @@
+Actual cancelled history: 已取消 · 状态尚未保存 · 9:00:00 AM已取消，未提交草稿不会改变世界。 已取消，但取消状态尚未保存。请检查本地存储后再恢复运行。ordinary draft
+✔ current cancelled SSE handler displays unsaved warning (1.888638ms)
+✔ history renders persistence warning supplied by snapshot after returning to world (55.399149ms)
+✔ loadWorld re-entry displays terminal cancellation without reconnect; unsaved=true (13.452278ms)
+✔ loadWorld re-entry displays terminal cancellation without reconnect; unsaved=false (7.394025ms)
+✔ normally persisted cancelled SSE uses the same explanation without a warning (1.381449ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 446.510499
