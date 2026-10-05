@@ -1,4 +1,5 @@
 import http from "node:http";
+import { queueOwnedWork } from "./queued-work.mjs";
 import { ImportJobs } from "./import-jobs.mjs";
 import { readFile, mkdir, writeFile, rm, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
@@ -425,14 +426,34 @@ export async function startServer({
       }
     })();
     jobs.add(job);
-    job.finally(() => {
+    const finished = () => {
       jobs.delete(job);
       if (
         ["committed", "failed", "cancelled", "interrupted"].includes(run.status)
       )
         live.delete(tokenOf(run));
-    });
+    };
+    job.then(finished, finished);
     return job;
+  }
+  function queueLaunch(run, retry = false) {
+    const work = queueOwnedWork(jobs, {
+      canStart: () => !stopped && !run.controller.signal.aborted,
+      start: () => launch(run, retry),
+      cancel: () => {
+        run.status = "cancelled";
+        store.saveRun(runShape(run));
+        notify(run, "cancelled", {});
+      },
+    });
+    const finished = () => {
+      if (
+        ["committed", "failed", "cancelled", "interrupted"].includes(run.status)
+      )
+        live.delete(tokenOf(run));
+    };
+    work.then(finished, finished);
+    return work;
   }
   try {
     store = new WorldStore(dataDir);
@@ -684,7 +705,7 @@ export async function startServer({
             };
             store.saveRun(runShape(run));
             live.set(token, run);
-            setImmediate(() => launch(run, true));
+            queueLaunch(run, true);
             return json(res, 202, { runId: token });
           }
         }
@@ -837,7 +858,7 @@ export async function startServer({
               };
               const token = tokenOf(r);
               live.set(token, run);
-              setImmediate(() => launch(run));
+              queueLaunch(run);
               return json(res, 202, { runId: token });
             }
             if (parts[3] === "select-branch")

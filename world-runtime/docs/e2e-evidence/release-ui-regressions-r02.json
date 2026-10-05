@@ -1,6 +1,6 @@
 {
   "kind": "jsdom + real HTTP/SSE/SQLite/DSH; not Chromium",
-  "at": "2026-10-05T16:14:59.751Z",
+  "at": "2026-10-05T16:30:53.647Z",
   "observations": [
     {
       "stage": "resumed",
