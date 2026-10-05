@@ -1,12 +1,12 @@
 {
   "date": "2026-10-05",
-  "stage": "defensive deferred-work ownership freeze; ordinary independent code/function reviews pending",
+  "stage": "queued cancellation outcome visibility freeze; ordinary independent quality/function reviews pending",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
   "node": "24.19.0",
   "runtime": "0.1.5-rc.2",
   "unit": {
-    "tests": 212,
-    "pass": 212,
+    "tests": 215,
+    "pass": 215,
     "fail": 0,
     "skipped": 0
   },
@@ -37,13 +37,13 @@
     "world-runtime/src/model.mjs": "30229e684852155efc2f2022fbde0eef8161d5981e0a956a46789ced0f170150",
     "world-runtime/src/observability.mjs": "1dd140e011cc2135a9eda1066c31bf2177666236ee266d8b543d7c25723d2e5d",
     "world-runtime/src/platform.mjs": "becc61bf073e514433a0a1f5fc90971ccd3c66db246282172bd321cbf04419ba",
-    "world-runtime/src/queued-work.mjs": "aa963477a500f3cd86be46b35aa12a27dd95d18de22d61c693c879b0f8c76c63",
+    "world-runtime/src/queued-work.mjs": "497053714fdb19c50e2dcc986ee4fc528073bae575e73cb9343175070f656325",
     "world-runtime/src/run-identity.mjs": "d66b48245ff6ac679da786ddfd2f85bed62296d97a22213bf260aad05197ec5d",
-    "world-runtime/src/server.mjs": "bc81be8ec3470751bec3619f4f8d297af41905d033409d77c0790201aa9e8418",
+    "world-runtime/src/server.mjs": "75f0ef483106836ac1cd0826bacccf0d79b6596e61d26d9038f7e0d32aff24e0",
     "world-runtime/src/storage-limits.mjs": "8a5be24e9d9915b306c2a99b080fb1290df731aa45a19b82edc68adbfad7b9c9",
     "world-runtime/src/store-test-support.mjs": "ee2f4f07f36a9304a2f69a540e73c8a8e0419b1f8e6cacbceb09bb6bee6a5ef1",
     "world-runtime/src/store.mjs": "ad45400a8a8d8083ff051177fc7f4eb3e62141f70c79d2f3b0090fb72652ad13",
-    "world-runtime/public/app.js": "e1530fc51ea260de36d10ad74489990d790474c5edb654afff8057b08335955a",
+    "world-runtime/public/app.js": "57fb3ad9e21a7c92f0a0bf3aa107daace539496f5a0136380cc88b6070893ced",
     "world-runtime/public/favicon.svg": "bd110874912c63c3375fb5b2634c661cf0230e2322a49a87eaeeae743da405ca",
     "world-runtime/public/index.html": "5f5f98088c9d90095b7a17b3dab204a6b5858454669fb2f9a2fc69ae93599500",
     "world-runtime/public/styles.css": "8b6a17c4712c56cfe4f3a176793d51a729db62dd0232e4a2ee854612213383da",
@@ -67,7 +67,7 @@
     "world-runtime/test/model.test.mjs": "d4b3f9e56af41cc05ff620efac4f9246a5a015ea374a4248fea2572fe1336246",
     "world-runtime/test/ordinary-metadata-closure.test.mjs": "4d6e1a85f3be523c44b7c63e95ce1a4dba0eb5ca06ea5a76edc9dc731732dfb6",
     "world-runtime/test/platform.test.mjs": "c8891bac0fd966c865941f393ce56ebbe9510b8c7de83e4bc3a44d2ae6540a35",
-    "world-runtime/test/queued-work.test.mjs": "8066d61f43076e68baa5af8e3b9e339021ba6bfaabc1abd84cfd7899f334fa51",
+    "world-runtime/test/queued-work.test.mjs": "e77be03492ce045a7762d936e5e6890bc7d2c4196c428e12324bac7e9bc3d85b",
     "world-runtime/test/review-fixes.test.mjs": "51f0b258de7b9fb06f67c517a5653281779b4d138771e662c542d0125de2296b",
     "world-runtime/test/run-identity-time.test.mjs": "21bca8541c366fd00503efb92102c87acf444414b63cb5f07662d21f4382419f",
     "world-runtime/test/schema-migration.test.mjs": "a4b5a2baded6bb47d070b739162adbf77dece67363a461ee0b22dcf361460c1c",
@@ -97,11 +97,11 @@
   "logical_database_version": 2,
   "ci": "workflow added; not executed remotely",
   "repair_base_commit": "12b0f306cde8a200ff7e200aa125419639c40bcc",
-  "base_commit": "bd9a050622d1ecc5610615a2e53896826ea6e2c2",
+  "base_commit": "2a9d6ad1ae869fbb81b18ba151daa58b19912b58",
   "reviewed_publication_candidate": "58562fac0cd308028000404cc4e05a1ed45a6d54",
   "evidence": [
-    "current-validation/queued-work-unit.txt",
-    "current-validation/queued-work-http-dom.txt",
+    "current-validation/cancel-outcome-unit.txt",
+    "current-validation/cancel-outcome-http-dom.txt",
     "DEFERRED_RUN_OWNERSHIP.md"
   ],
   "known_issue": "Registration rename EIO plus staging cleanup EBUSY can replace primary diagnostic and retain unreferenced staging/assets until restart; no registered-card corruption observed.",
@@ -115,5 +115,6 @@
     "result": "failure",
     "run_url": "https://github.com/lurenyi4/dsh-tavern/actions/runs/37331115093"
   },
-  "prior_full_review_status": "bd9a050 full review interrupted by platform safety checking; incomplete and not PASS; blocked dynamic work not retried"
+  "prior_full_review_status": "bd9a050 full review interrupted by platform safety checking; incomplete and not PASS; blocked dynamic work not retried",
+  "prior_ordinary_review_status": "2a9d6ad focused normal-function PASS; ordinary functional review requested static P2 cancellation-error visibility correction"
 }

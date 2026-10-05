@@ -1,0 +1,13 @@
+✔ normal turn work is owned from queueing through completion (2.632568ms)
+✔ normal retry work is owned from queueing through completion (0.647025ms)
+✔ normal closing drains queued cancellation before releasing its resource (0.624763ms)
+✔ already-cancelled work does not invoke its start callback (1.341251ms)
+✔ rejected deferred work settles and leaves no orphan job (0.790898ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 82.516213

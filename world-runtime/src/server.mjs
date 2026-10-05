@@ -1,5 +1,5 @@
 import http from "node:http";
-import { queueOwnedWork } from "./queued-work.mjs";
+import { queueOwnedWork, cancelQueuedRun } from "./queued-work.mjs";
 import { ImportJobs } from "./import-jobs.mjs";
 import { readFile, mkdir, writeFile, rm, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
@@ -178,8 +178,15 @@ export async function startServer({
     const out = visibleSnapshot(snap, mode);
     out.runs = (out.runs || []).map((r) => ({
       ...r,
+      ...(live.get(tokenOf(r))?.persistenceWarning
+        ? {
+            status: live.get(tokenOf(r)).status,
+            persistenceWarning: live.get(tokenOf(r)).persistenceWarning,
+          }
+        : {}),
       token: tokenOf(r),
       canRetrySettlement:
+        !live.get(tokenOf(r))?.persistenceWarning &&
         ["failed", "interrupted", "draft"].includes(r.status) &&
         !!r.draft &&
         Array.isArray(snap.runs?.find((x) => x.runId === r.runId)?.operations),
@@ -429,7 +436,10 @@ export async function startServer({
     const finished = () => {
       jobs.delete(job);
       if (
-        ["committed", "failed", "cancelled", "interrupted"].includes(run.status)
+        ["committed", "failed", "cancelled", "interrupted"].includes(
+          run.status,
+        ) &&
+        !run.persistenceWarning
       )
         live.delete(tokenOf(run));
     };
@@ -440,15 +450,18 @@ export async function startServer({
     const work = queueOwnedWork(jobs, {
       canStart: () => !stopped && !run.controller.signal.aborted,
       start: () => launch(run, retry),
-      cancel: () => {
-        run.status = "cancelled";
-        store.saveRun(runShape(run));
-        notify(run, "cancelled", {});
-      },
+      cancel: () =>
+        cancelQueuedRun(run, {
+          save: () => store.saveRun(runShape(run)),
+          notify: (outcome) => notify(run, "cancelled", outcome),
+        }),
     });
     const finished = () => {
       if (
-        ["committed", "failed", "cancelled", "interrupted"].includes(run.status)
+        ["committed", "failed", "cancelled", "interrupted"].includes(
+          run.status,
+        ) &&
+        !run.persistenceWarning
       )
         live.delete(tokenOf(run));
     };
@@ -662,7 +675,7 @@ export async function startServer({
             }
             if (["cancelled", "failed", "interrupted"].includes(status)) {
               res.write(
-                `event: ${status === "cancelled" ? "cancelled" : "error"}\ndata: ${JSON.stringify(status === "cancelled" ? {} : r.error || { code: "INTERRUPTED", message: "运行中断，请检查保存的草稿" })}\n\n`,
+                `event: ${status === "cancelled" ? "cancelled" : "error"}\ndata: ${JSON.stringify(status === "cancelled" ? { persisted: !active?.persistenceWarning, ...(active?.persistenceWarning ? { persistenceWarning: active.persistenceWarning } : {}) } : r.error || { code: "INTERRUPTED", message: "运行中断，请检查保存的草稿" })}\n\n`,
               );
               return res.end();
             }
@@ -689,7 +702,17 @@ export async function startServer({
               active.controller.abort();
               return json(res, 200, { cancelled: true });
             }
-            return json(res, 200, { cancelled: false, status: r.status });
+            return json(
+              res,
+              200,
+              active?.persistenceWarning
+                ? {
+                    cancelled: true,
+                    status: active.status,
+                    persistenceWarning: active.persistenceWarning,
+                  }
+                : { cancelled: false, status: r.status },
+            );
           }
           if (method === "POST" && parts[3] === "retry") {
             await body(req);
@@ -1156,6 +1179,14 @@ export async function startServer({
               for (const r of live.values()) r.controller.abort();
               await Promise.allSettled([...jobs]);
             }
+            for (const run of live.values())
+              if (run.persistenceWarning)
+                warnings.push({
+                  worldId: run.worldId,
+                  branchId: run.branchId,
+                  runId: run.runId,
+                  persistenceWarning: run.persistenceWarning,
+                });
             // Business is drained; remaining idle/SSE transports cannot delay disposal.
             server.closeAllConnections();
             await attempt(() => listenerClosed);

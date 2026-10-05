@@ -1169,8 +1169,14 @@ function watchRun(token, data) {
         : result.postCommitNotice || "正文与世界变化已保存。",
     );
   });
-  a.stream.addEventListener("cancelled", () => {
-    if (state.active === a) finishRun("已取消，未提交草稿不会改变世界。");
+  a.stream.addEventListener("cancelled", (e) => {
+    const outcome = e.data ? JSON.parse(e.data) : {};
+    if (state.active === a)
+      finishRun(
+        outcome.persistenceWarning?.message ||
+          "已取消，未提交草稿不会改变世界。",
+        !!outcome.persistenceWarning,
+      );
   });
   a.stream.addEventListener("error", (e) => {
     if (state.active !== a) return;
