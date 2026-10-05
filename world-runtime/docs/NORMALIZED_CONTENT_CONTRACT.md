@@ -31,3 +31,7 @@ Independent reviews for080b9dd are preserved; this new candidate requires two ne
 ### Worker failures use the same failure ownership
 
 Receive errors, worker parser/timeout failures, and errors saving a ready result now use the same small failJob path. An existing primary error is preserved; closeWarning, cleanupWarning and persistenceWarning are secondary diagnostics. persistenceWarning records a previous failed journal write; cancel/close retries persistence. No implementation can promise the latest error survived a crash while every journal write is failing; the in-process result remains accurate and startup still reconciles existing records. Tests explicitly restore journal writes before asserting exact primary-error persistence across reopen.
+
+### Completion is separate from terminal status
+
+A visible failed/cancelled/completed status can precede the final asynchronous journal write. Terminal close, cancel and history reclamation now await the existing upload/worker/journal completion; close/history also join an already-running cancellation. Cancel's own internal wait excludes itself. Repeated close returns the same completion promise, and new cancellation is refused once shutdown starts. Rejected receive promises already have primary errors recorded; rejected finalization promises are retained as persistence diagnostics. This closes the e327359 CI shutdown race; it does not change the normalized-content or backup limits.

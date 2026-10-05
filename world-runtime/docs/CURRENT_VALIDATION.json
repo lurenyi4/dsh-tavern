@@ -1,12 +1,12 @@
 {
   "date": "2026-10-05",
-  "stage": "Linux media slice: both independent reviews PASS; one accepted non-blocking registration-cleanup minor",
+  "stage": "CI finalization race repair freeze; two new independent reviews pending",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
   "node": "24.19.0",
   "runtime": "0.1.5-rc.2",
   "unit": {
-    "tests": 191,
-    "pass": 191,
+    "tests": 195,
+    "pass": 195,
     "fail": 0,
     "skipped": 0
   },
@@ -28,7 +28,7 @@
     "world-runtime/src/domain-state.mjs": "cdd981a7cbccdb67695cb0a004f0bf7b4ed3f83fa3c1052eec77d3b5cb6a8652",
     "world-runtime/src/host.mjs": "627967849a3a733b3a7d58e8398ea4a6eb0f2eae2d95b09a62e839d7e8098498",
     "world-runtime/src/import-formats.mjs": "cbe3fb9254d2a7a11353967f4006ca24a27197458505616f110f5ba215702b14",
-    "world-runtime/src/import-jobs.mjs": "30f0758af96f8a2db26bbd161e27544cdb9f7dabcf0270b4c866834e5657f151",
+    "world-runtime/src/import-jobs.mjs": "01a25f0aa7b674abe2bb56d228fef3e58fe58577b27b7a0c655eb7828d841417",
     "world-runtime/src/import-risu.mjs": "5f9f075b6d36e15243adb8d3622a640dbd8fdad860ad5db6774f0411de5280cd",
     "world-runtime/src/import-worker.mjs": "18494c8710a06b41f57db2050788b2d745fbe15d4fe01cb6b697fa1f6c8311b7",
     "world-runtime/src/importer.mjs": "e951ccf68ee4eda57a16e1558e688767147c366407207a106174d6a0c9b52578",
@@ -54,6 +54,7 @@
     "world-runtime/test/e2e-api.mjs": "20ba1208a52caf3d3d02f5de95394b49d0de62f66ebdb6d258480a3decdfda85",
     "world-runtime/test/e2e-browser.mjs": "2a4f6ee7811f75cea1a87a05ffe5cb44e81e024b0253beee6aebf7ddd92b6087",
     "world-runtime/test/e2e-dom.mjs": "d2c9b9cdf20f6b74ebcb56d2644b60bee4ed1c1b49d120320aa342b0b069fc4c",
+    "world-runtime/test/import-finalization.test.mjs": "5fcf38f2e4892ef5cd880704647b1dd383421ae7fe19c0d87b2db5d5d77b1094",
     "world-runtime/test/import-jobs.test.mjs": "2a8324529aa46cf355e795bf9d55fe45a0e85768909fa8a24cf37dc3754044c5",
     "world-runtime/test/importer.test.mjs": "d0d6ca0dbde58bfd1971f977f1f2dec734f72f3607b68121d6ef442dfdfb9fd6",
     "world-runtime/test/install-command.test.mjs": "7911883249212edc7f7e9276dafd785220391f32cba402c5f91135a68b1a2766",
@@ -92,18 +93,24 @@
   "logical_database_version": 2,
   "ci": "workflow added; not executed remotely",
   "repair_base_commit": "12b0f306cde8a200ff7e200aa125419639c40bcc",
-  "base_commit": "091ee8fc052fc53b0c08e5efb3c2b9552d34a312",
+  "base_commit": "e327359eac0e21a575e47d9d3f5d0f68d356b8da",
   "reviewed_publication_candidate": "58562fac0cd308028000404cc4e05a1ed45a6d54",
   "evidence": [
-    "current-validation/worker-failure-red.txt",
-    "current-validation/worker-failure-http-green.txt",
-    "current-validation/worker-failure-unit.txt",
-    "current-validation/worker-failure-http-dom.txt"
+    "current-validation/published-media-ci-failure.txt",
+    "current-validation/finalization-red.txt",
+    "current-validation/finalization-green.txt",
+    "current-validation/finalization-unit.txt",
+    "current-validation/finalization-http-dom.txt"
   ],
-  "reviewed_source_commit": "9bc7960ef9bf5c1165df11c908e7f58659911581",
-  "independent_reviews": [
+  "known_issue": "Registration rename EIO plus staging cleanup EBUSY can replace primary diagnostic and retain unreferenced staging/assets until restart; no registered-card corruption observed.",
+  "previous_reviewed_source_commit": "9bc7960ef9bf5c1165df11c908e7f58659911581",
+  "previous_independent_reviews": [
     "media-final-focused-review/REVIEW.md",
     "media-final-full-review/REVIEW.md"
   ],
-  "known_issue": "Registration rename EIO plus staging cleanup EBUSY can replace primary diagnostic and retain unreferenced staging/assets until restart; no registered-card corruption observed."
+  "published_media_ci": {
+    "commit": "e327359eac0e21a575e47d9d3f5d0f68d356b8da",
+    "result": "failure",
+    "run_url": "https://github.com/lurenyi4/dsh-tavern/actions/runs/37331115093"
+  }
 }

@@ -43,3 +43,7 @@ Both new independent reviews PASS on source9bc7960 (media-final-focused-review/R
 Accepted non-blocking minor: when registration rename fails EIO and staging removal also fails EBUSY, the latter can replace the primary diagnostic and postpone staging/new unreferenced asset cleanup until startup. Cancellation alone does not own these leftover paths. Independent HTTP tests confirm no card published or registered card modified; after the fault is removed, another import, world creation and complete backup succeed, and restart clears the leftovers. No code change was made for this optional follow-up; see full-review F1. This is not a power-loss durability guarantee.
 
 Publish this reviewed slice only on feat/local-media-imports; main remains the previously reviewed Linux baseline. The complete-product, Android/native, device, real-browser, licensed-ecosystem and model-quality/cost gates listed above remain open.
+
+## Branch CI follow-up
+
+The approved9bc7960 product plus documentation was published as e327359 to feat/local-media-imports; main was unchanged. Its exact-SHA remote core CI failed on an asynchronous shutdown race despite prior local/independent passes. The local follow-up fixes in-flight finalization waiting and requires fresh reviews. Therefore the earlier independent PASS remains evidence for9bc7960 only; it is not a claim that e327359 CI was green or that this follow-up is approved.

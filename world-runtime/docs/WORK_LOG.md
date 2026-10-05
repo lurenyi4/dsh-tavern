@@ -109,3 +109,7 @@ Both091ee8f independent reviews identified the same adjacent worker-completion e
 ## Linux media slice approved for branch publication — 2026-10-05
 
 The new focused and full reviews both PASS source9bc7960, no block/critic/major. Full review's optional importer double-storage-fault cleanup minor is recorded in MEDIA_IMPORT_SLICE.md and CURRENT_VALIDATION.json, with recovery evidence retained. This documentation-only follow-up preserves the reviewed product source/tests exactly. Branch publication is authorized; no merge/main update, deployment or complete-product claim is included.
+
+## Exact-SHA CI finalization race — 2026-10-05
+
+Published reviewed source plus approval docs as e327359 on feat/local-media-imports only; main remained58562fac. Remote Story Runtime core run37331115093 failed191-test execution:190passed, malformed-upload teardown saw ENOTEMPTY because status was terminal before the worker's journal finished. This is recorded as a real CI failure, not rerun away. A controlled delayed-save test reproduced premature close and terminal cancel as RED. The repair waits for in-flight completion before terminal close/cancel/history reclamation, tracks existing cancellation and coalesces repeated close. Consumers perform the wait; producers do not await themselves. Four delayed-save checks cover all paths and close concurrent with cancellation. Early local harness fixes are not counted as product failures. Product change is confined to import-jobs.mjs; new source needs two fresh reviews before pushing.

@@ -89,6 +89,18 @@ export class ImportJobs {
       return false;
     }
   }
+  async awaitFinalization(j, includeCancel = false) {
+    // Only consumers call this; worker/receive producers never await themselves.
+    await j.uploadWork?.catch(() => {}); // receive already records its primary error
+    const pending = [j.work, j.saving];
+    if (includeCancel) pending.push(j.cancelWork);
+    for (const result of await Promise.allSettled(pending))
+      if (result.status === "rejected")
+        j.persistenceWarning ??= {
+          code: result.reason?.code || "IMPORT_STORAGE",
+          message: "导入终结记录曾保存失败；清理重试或关闭时会再次保存。",
+        };
+  }
   async failJob(j, error, file) {
     if (!["cancelled", "interrupted"].includes(j.status)) {
       j.status = "failed";
@@ -205,6 +217,7 @@ export class ImportJobs {
     for (const old of [...this.jobs.values()]
       .filter((j) => terminal.has(j.status))
       .slice(0, Math.max(0, this.jobs.size - 49))) {
+      await this.awaitFinalization(old, true);
       if (!(await this.cleanup(old))) {
         await this.save(old);
         continue;
@@ -350,10 +363,23 @@ export class ImportJobs {
     await j.work;
     return this.get(id);
   }
-  async cancel(id) {
+  cancel(id) {
+    const j = this.jobs.get(id);
+    if (!j) return Promise.reject(failure("IMPORT_NOT_FOUND", "任务不存在"));
+    if (this.closed)
+      return Promise.reject(failure("IMPORT_CLOSED", "服务正在关闭"));
+    if (j.cancelWork) return j.cancelWork;
+    const work = this.cancelJob(id);
+    j.cancelWork = work;
+    return work.finally(() => {
+      if (j.cancelWork === work) delete j.cancelWork;
+    });
+  }
+  async cancelJob(id) {
     const j = this.jobs.get(id);
     if (!j) throw failure("IMPORT_NOT_FOUND", "任务不存在");
     if (terminal.has(j.status)) {
+      await this.awaitFinalization(j);
       await this.cleanup(j);
       await this.save(j);
       return this.get(id);
@@ -373,11 +399,16 @@ export class ImportJobs {
     await this.save(j);
     return this.get(id);
   }
-  async close() {
+  close() {
+    this.closeWork ??= this.closeJobs();
+    return this.closeWork;
+  }
+  async closeJobs() {
     if (this.closed) return;
     this.closed = true;
     for (const j of this.jobs.values()) {
       if (terminal.has(j.status)) {
+        await this.awaitFinalization(j, true);
         const prior = j.cleanupWarning;
         await this.cleanup(j);
         if (prior || j.cleanupWarning || j.persistenceWarning)
