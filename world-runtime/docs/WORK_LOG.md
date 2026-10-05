@@ -133,3 +133,7 @@ Read the queued-work focused and ordinary functional reviews. Addressed the latt
 ## Run-history warning continuity — 2026-10-05
 
 Read e8's ordinary functional report and permitted pure-DOM contract. Reproduced the snapshot warning omission as one RED. Reused one UI formatter for live cancellation and history, with an explicit unsaved summary label and preserved independent error/draft content. Added loadWorld leave/re-entry contracts that verify no terminal SSE reattachment is needed, and a normal saved-cancellation negative control. Product modification is app.js only. The older running-launch storage-warning limitation remains a documented static boundary; no new network/storage fault experiment or blocked script was used. New ordinary independent reviews remain pending.
+
+## Ordinary reviewed branch publication follow-up — 2026-10-05
+
+Preserved both b7a25cd ordinary PASS reports and their scope/known limitations. Only review documentation and the validation decision changed after review; product and test bytes remain exactly b7a25cd. Authorized target is feat/local-media-imports only; no merge/main/deploy. Exact remote commit/CI must be verified after pushing. The previously interrupted review and incomplete native/platform/product goals are not relabeled complete.

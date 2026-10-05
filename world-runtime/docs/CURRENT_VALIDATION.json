@@ -1,6 +1,6 @@
 {
   "date": "2026-10-05",
-  "stage": "shared run-history/SSE warning display freeze; new ordinary quality/function reviews pending",
+  "stage": "b7a25cd ordinary functional/code-quality dual review PASS; documentation-only publication follow-up",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
   "node": "24.19.0",
   "runtime": "0.1.5-rc.2",
@@ -122,5 +122,10 @@
   "prior_ordinary_review_status": "e8a2402 ordinary full review requested one pure-DOM history-warning correction; not publication approval",
   "known_static_limitations": [
     "Already-running launch cancellation save-error visibility is not covered by the queued-start outcome guarantee; not dynamically investigated in this UI repair."
+  ],
+  "reviewed_source_commit": "b7a25cdb5e5343eefa60fd5a706c9c146b2d34c7",
+  "ordinary_reviews": [
+    "approved-history-focused-review/REVIEW.md",
+    "approved-ordinary-full-review/REVIEW.md"
   ]
 }
