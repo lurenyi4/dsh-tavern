@@ -1,0 +1,28 @@
+✔ terminal close awaits the worker journal already in progress (128.92618ms)
+✔ terminal cancel awaits the worker journal already in progress (120.719071ms)
+✔ terminal history awaits the worker journal already in progress (174.304474ms)
+✔ close also waits for an already-running cancellation journal without self-await (54.024967ms)
+✔ binary upload previews without registration, explicit accept preserves exact original and duplicate identity (116.122944ms)
+✔ preview cancellation and malformed upload leave existing content intact and permit retry (132.845698ms)
+✔ incomplete transfer fails atomically and startup records interrupted imports (13.941562ms)
+✔ resource preview is local, cancellation removes staging and startup cleans only unreferenced media (106.790494ms)
+✔ cancelling an in-flight upload releases the slot and does not register partial bytes (7.872344ms)
+✔ a 21 MiB CharX uploads in bounded chunks, retains unknown binary and remains usable after reopen (1515.018407ms)
+✔ process termination after preview leaves an interrupted job and no partially registered card (164.481283ms)
+✔ cancel before atomic publication cleans only newly created resources and keeps earlier card media (25.329288ms)
+✔ ready-record EIO releases upload and terminal cancel retries a transient cleanup failure (78.929923ms)
+✔ acceptance rejects media duplication beyond the bounded backup closure without affecting existing cards (1626.765034ms)
+✔ real HTTP published accept journal EIO cannot strand listener or data lock: once (3252.56675ms)
+✔ real HTTP published accept journal EIO cannot strand listener or data lock: persistent (3146.247498ms)
+✔ accepted history create belongs to close boundary; closing rejects every new mutation (149.068122ms)
+✔ eviction reserves its journal against a newly arriving cancel (58.473125ms)
+✔ pre-publication close retries a one-shot cancelled journal failure (89.024639ms)
+✔ unexpected disposal error still closes listener, store and lock and repeated close is truthful (21.9134ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6840.967481

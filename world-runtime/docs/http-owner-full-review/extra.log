@@ -1,0 +1,11 @@
+✔ failed initial create journal does not retain busy slot; later actual import and reopen work (126.167278ms)
+✔ accepted stream + duplicate cancellation + close drains without self-await or later writers, 30 cycles (257.72372ms)
+✔ history journal deletion failure releases reservation and future create can progress (90.685557ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2527.240482

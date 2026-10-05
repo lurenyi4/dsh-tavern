@@ -76,6 +76,7 @@ const safeError = (e) => ({
       : "操作未完成；存档保留，请查看本地运行记录。",
 });
 const json = (res, status, value) => {
+  if (res.destroyed || res.writableEnded) return;
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
@@ -140,6 +141,7 @@ export async function startServer({
     { mode: 0o600 },
   );
   let store, projection, server, imports;
+  const httpHandlers = new Map();
   const live = new Map(),
     jobs = new Set(),
     auto = new Map(),
@@ -466,11 +468,7 @@ export async function startServer({
       }
     }
     imports = await ImportJobs.open(dataDir);
-    server = http.createServer(async (req, res) => {
-      if (stopped)
-        return json(res, 503, {
-          error: { code: "SERVER_CLOSING", message: "服务正在关闭" },
-        });
+    const handleRequest = async (req, res) => {
       res.setHeader("x-content-type-options", "nosniff");
       res.setHeader("referrer-policy", "no-referrer");
       res.setHeader(
@@ -1002,6 +1000,7 @@ export async function startServer({
         }
         throw err("NOT_FOUND", "找不到此页面或接口", 404);
       } catch (e) {
+        if (res.destroyed || res.writableEnded) return;
         if (res.headersSent) {
           res.end();
           return;
@@ -1021,6 +1020,22 @@ export async function startServer({
               : 400);
         json(res, status, { error: safeError(e) });
       }
+    };
+    server = http.createServer((req, res) => {
+      if (stopped) {
+        res.once("finish", () => req.destroy());
+        json(res, 503, {
+          error: { code: "SERVER_CLOSING", message: "服务正在关闭" },
+        });
+        return;
+      }
+      // Socket closure does not end an admitted asynchronous business operation.
+      const work = handleRequest(req, res).catch((e) => {
+        json(res, 500, { error: safeError(e) });
+      });
+      httpHandlers.set(req, work);
+      const finished = () => httpHandlers.delete(req);
+      work.then(finished, finished);
     });
     await new Promise((yes, no) => {
       server.once("error", no);
@@ -1105,16 +1120,24 @@ export async function startServer({
             server.close((e) => (e ? reject(e) : resolve())),
           );
           listenerClosed.catch(() => {});
+          // A partial body cannot finish useful work; unblock its async iterator.
+          for (const req of httpHandlers.keys())
+            if (!req.complete) req.destroy();
           for (const r of live.values()) r.controller.abort();
           try {
             const result = await attempt(() => imports.close());
             warnings.push(...(result?.warnings || []));
-            await attempt(() => listenerClosed);
-            // Requests already accepted before listener closure may have launched work.
+            while (httpHandlers.size)
+              await Promise.allSettled([...httpHandlers.values()]);
+            // Every admitted handler has settled, including disconnected clients.
+            // Any background work it launched is now owned by the jobs set.
             while (jobs.size) {
               for (const r of live.values()) r.controller.abort();
               await Promise.allSettled([...jobs]);
             }
+            // Business is drained; remaining idle/SSE transports cannot delay disposal.
+            server.closeAllConnections();
+            await attempt(() => listenerClosed);
           } finally {
             await attempt(() => projection.close());
             await attempt(() => store.close());

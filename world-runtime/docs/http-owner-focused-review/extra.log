@@ -1,0 +1,12 @@
+✔ two actual disposer failures are retained; listener and lock disposed; same rejection and restart (160.571201ms)
+✔ normal success, repeated accept/cancel, history retention and repeated close preserve published bytes (268.754755ms)
+✔ close during preparing persistence joins receive without starting a worker (5.847786ms)
+✔ eviction unlink EIO releases reservation and failed create leaves no permanently busy slot (74.516844ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 636.177669

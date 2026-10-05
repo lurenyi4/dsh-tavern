@@ -51,3 +51,7 @@ The approved9bc7960 product plus documentation was published as e327359 to feat/
 ## Service-lifecycle review follow-up
 
 The1265570 full review found two shutdown/admission majors despite its focused PASS. Both and a history cancellation minor were reproduced and repaired using one active-operation admission boundary plus unconditional service disposal attempts. See IMPORT_SERVICE_LIFECYCLE.md and preserved service-lifecycle review reports. The new candidate is not yet independently approved or remotely validated; e327359 remains the published media branch tip with failed CI.
+
+## HTTP-owner review follow-up
+
+The1732191 full review found that a disconnected socket could leave an unowned asynchronous handler publishing after successful shutdown. That major is now covered by generic admitted-handler Promise ownership and real disconnected import/world/action tests, with partial-body shutdown cancellation. See IMPORT_SERVICE_LIFECYCLE.md and preserved http-owner review reports. This follow-up still requires two fresh independent reviews and exact-SHA remote CI; older PASS statements apply only to their named candidates.

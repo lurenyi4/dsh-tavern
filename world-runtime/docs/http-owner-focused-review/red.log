@@ -1,0 +1,5 @@
+{"case":"prepublication","outcomes":["rejected","rejected"],"memory":"cancelled","disk":"registering","repeatedSame":true}
+{"case":"history-close","closeResolvedEarly":true,"writesAfterClose":1}
+{"case":"history-cancel","cancel":"rejected","error":"IMPORT_NOT_FOUND","inMap":false,"journalRecreated":true}
+{"case":"HTTP","persistent":false,"faults":1,"close":"rejected","error":"EIO","accept":{"http":400,"error":{"code":"EIO","message":"real journal EIO"}},"listener":true,"lock":true,"repeatedSame":false,"repeat":"fulfilled","reopenedCards":1,"reopenedStatus":"completed"}
+{"case":"HTTP","persistent":true,"faults":1,"close":"rejected","error":"EIO","accept":{"http":400,"error":{"code":"EIO","message":"real journal EIO"}},"listener":true,"lock":true,"repeatedSame":false,"repeat":"fulfilled","reopenedCards":1,"reopenedStatus":"completed"}

@@ -1,0 +1,82 @@
+✖ disconnected import handler remains owned through close; storage failure false (232.778807ms)
+✖ disconnected import handler remains owned through close; storage failure true (159.949696ms)
+✖ disconnected worlds handler remains owned through close; storage failure false (165.589766ms)
+✖ disconnected worlds handler remains owned through close; storage failure true (160.355786ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 821.74522
+
+✖ failing tests:
+
+test at world-runtime/test/http-handler-lifecycle.test.mjs:4:72
+✖ disconnected import handler remains owned through close; storage failure false (232.778807ms)
+  AssertionError [ERR_ASSERTION]: business handler must outlive its disconnected socket
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/http-handler-lifecycle.test.mjs:6:912)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at world-runtime/test/http-handler-lifecycle.test.mjs:4:72
+✖ disconnected import handler remains owned through close; storage failure true (159.949696ms)
+  AssertionError [ERR_ASSERTION]: business handler must outlive its disconnected socket
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/http-handler-lifecycle.test.mjs:6:912)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at world-runtime/test/http-handler-lifecycle.test.mjs:4:72
+✖ disconnected worlds handler remains owned through close; storage failure false (165.589766ms)
+  AssertionError [ERR_ASSERTION]: business handler must outlive its disconnected socket
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/http-handler-lifecycle.test.mjs:6:912)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at world-runtime/test/http-handler-lifecycle.test.mjs:4:72
+✖ disconnected worlds handler remains owned through close; storage failure true (160.355786ms)
+  AssertionError [ERR_ASSERTION]: business handler must outlive its disconnected socket
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/http-handler-lifecycle.test.mjs:6:912)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
