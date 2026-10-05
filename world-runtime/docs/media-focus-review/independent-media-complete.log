@@ -1,0 +1,52 @@
+✖ normal 60 MiB resources: preview remains unregistered, accept and backup restore retain exact bytes (4255.28024ms)
+✔ ordinary preparing cancellation releases worker and staging without registering (438.577982ms)
+✔ ordinary accept followed immediately by cancel is atomic and can be retried (182.561834ms)
+✔ ordinary 21 MiB accepted resource survives backup and restore (2346.600728ms)
+{"failure":"ready record save","remaining":["45067239-4c78-4201-b0e6-75ac7a5cbf68.json","45067239-4c78-4201-b0e6-75ac7a5cbf68.upload"]}
+✖ transient job-record persistence failure must release unregistered upload storage (117.480527ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7494.282404
+
+✖ failing tests:
+
+test at world-runtime/docs/media-focus-review/independent-media.test.mjs:15:1
+✖ normal 60 MiB resources: preview remains unregistered, accept and backup restore retain exact bytes (4255.28024ms)
+  Error: 备份文件超出安全大小限制
+      at fail (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs:13:49)
+      at readRegular (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs:35:20)
+      at async add (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs:98:15)
+      at async visit (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs:114:11)
+      at async visit (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs:113:6)
+      at async createBackup (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs:117:40)
+      at async TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/media-focus-review/independent-media.test.mjs:19:56)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    code: 'BACKUP_LIMIT'
+  }
+
+test at world-runtime/docs/media-focus-review/independent-media.test.mjs:30:1
+✖ transient job-record persistence failure must release unregistered upload storage (117.480527ms)
+  AssertionError [ERR_ASSERTION]: failure/cancel/close should remove source staging, even for a terminal job
+  + actual - expected
+  
+    [
+      '45067239-4c78-4201-b0e6-75ac7a5cbf68.json',
+  +   '45067239-4c78-4201-b0e6-75ac7a5cbf68.upload'
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/media-focus-review/independent-media.test.mjs:32:417)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '45067239-4c78-4201-b0e6-75ac7a5cbf68.json', '45067239-4c78-4201-b0e6-75ac7a5cbf68.upload' ],
+    expected: [ '45067239-4c78-4201-b0e6-75ac7a5cbf68.json' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

@@ -75,3 +75,7 @@ cycle2新Major（非实体暂存ID与事件有效时间）已补真实HTTP/SQLit
 ## Linux media/import slice
 
 Separate branch from source172a8df: CAP-08 now has all validated local image/audio previews, T-09 has binary progress, worker parsing, explicit preview/accept, cancel/close, real-process interruption recovery and conservative orphan cleanup. Final local validation: 171 unit and 10 actual HTTP/DOM tests pass. See MEDIA_IMPORT_SLICE.md for precise implemented boundaries and evidence. Broader real licensed cards, full media/HTML behaviors, mobile memory and real device/browser acceptance remain open. These tests do not self-approve the new slice; two fresh independent reviews are pending.
+
+### First media-review repair
+
+The f26cc35 slice was rejected by both independent reviewers. Their normal large-import backup and post-rename fsync findings are retained unchanged in media-focus-review and media-full-review. Shared64MiB per-file bounds,128MiB/2000-file current-footprint admission, truthful completed-with-durability-warning and restart reconciliation now address those paths. Failure cleanup and media lifecycle/decoder messages were also repaired. Final175unit/10HTTP+DOM checks pass; the original independent60MiB backup/restore test also passes unchanged. This does not self-close the review gate or any outstanding real-device/community-card/model-quality requirements.

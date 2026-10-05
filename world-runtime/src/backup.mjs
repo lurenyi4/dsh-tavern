@@ -7,7 +7,8 @@ import {WorldStore} from './store.mjs';
 import {importCard} from './importer.mjs';
 import {parseJson, sniffMedia} from './import-formats.mjs';
 
-const MAX=128*1024*1024, FILE_MAX=40*1024*1024, COUNT=2000;
+import {STORAGE_LIMITS} from './storage-limits.mjs';
+const MAX=STORAGE_LIMITS.backupBytes, FILE_MAX=STORAGE_LIMITS.backupFileBytes, COUNT=STORAGE_LIMITS.backupFiles;
 const HASH=/^[a-f0-9]{64}$/;
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fail=(code,message)=>{throw Object.assign(new Error(message),{code});};

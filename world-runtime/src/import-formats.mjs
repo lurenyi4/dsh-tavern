@@ -1,6 +1,7 @@
+import {STORAGE_LIMITS} from './storage-limits.mjs';
 import { inflateRawSync, inflateSync } from 'node:zlib';
 
-export const IMPORT_LIMITS = Object.freeze({ rawBytes: 64 * 1024 * 1024, expandedBytes: 128 * 1024 * 1024, entryBytes: 32 * 1024 * 1024, jsonBytes: 8 * 1024 * 1024, entries: 512, ratio: 100, pathDepth: 12, pathBytes: 512, jsonDepth: 64, jsonNodes: 100000, pngChunks: 4096, metadataChunks: 16, imageDimension: 16384, imagePixels: 40 * 1024 * 1024 });
+export const IMPORT_LIMITS = Object.freeze({ rawBytes: STORAGE_LIMITS.originalBytes, expandedBytes: 128 * 1024 * 1024, entryBytes: 32 * 1024 * 1024, jsonBytes: 8 * 1024 * 1024, entries: 512, ratio: 100, pathDepth: 12, pathBytes: 512, jsonDepth: 64, jsonNodes: 100000, pngChunks: 4096, metadataChunks: 16, imageDimension: 16384, imagePixels: 40 * 1024 * 1024 });
 export function fail(code, message) { throw Object.assign(new Error(message), { code }); }
 export const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const utf8 = new TextDecoder('utf-8', { fatal: true });

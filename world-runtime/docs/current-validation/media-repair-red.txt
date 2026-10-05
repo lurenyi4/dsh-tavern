@@ -1,0 +1,62 @@
+{"large":false,"originalBytes":2488,"importStatus":"completed","worldStatus":201,"backupStatus":200}
+small media backup restore passed
+{"large":true,"originalBytes":44042912,"importStatus":"completed","worldStatus":201,"backupStatus":400,"backupError":{"code":"BACKUP_LIMIT","message":"备份文件超出安全大小限制"}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+400 !== 200
+
+    at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/media-backup.test.mjs:25:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 400,
+  expected: 200,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
+✖ world-runtime/test/media-backup.test.mjs (3510.150992ms)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'failed'
+- 'completed'
+
+    at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/media-publication.test.mjs:20:9 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'failed',
+  expected: 'completed',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
+✖ world-runtime/test/media-publication.test.mjs (183.978207ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3519.269247
+
+✖ failing tests:
+
+test at world-runtime/test/media-backup.test.mjs:1:1
+✖ world-runtime/test/media-backup.test.mjs (3510.150992ms)
+  'test failed'
+
+test at world-runtime/test/media-publication.test.mjs:1:1
+✖ world-runtime/test/media-publication.test.mjs (183.978207ms)
+  'test failed'

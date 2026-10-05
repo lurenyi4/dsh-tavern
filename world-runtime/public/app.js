@@ -64,7 +64,50 @@ async function guarded(fn) {
 function name(id) {
   return state.snapshot?.state.characters.find((c) => c.id === id)?.name || id;
 }
+function releaseMedia(root) {
+  for (const media of root.querySelectorAll("audio")) {
+    if (!media.hasAttribute("src")) continue;
+    media.pause();
+    media.removeAttribute("src");
+    media.load();
+  }
+}
+function mediaFigure(asset, url) {
+  const item = el("figure"),
+    media = el(asset.mime.startsWith("audio/") ? "audio" : "img");
+  media.src = url;
+  if (media.tagName === "AUDIO") {
+    media.controls = true;
+    media.preload = "none";
+  } else {
+    media.alt = asset.name;
+    media.loading = "lazy";
+  }
+  media.addEventListener(
+    "error",
+    () =>
+      item.append(
+        el("p", "当前设备无法解码此媒体；原件仍保留。", "media-error"),
+      ),
+    { once: true },
+  );
+  item.append(
+    media,
+    el(
+      "figcaption",
+      asset.name +
+        " · " +
+        asset.mime +
+        " · " +
+        Math.ceil(asset.size / 1024) +
+        " KiB",
+    ),
+  );
+  return item;
+}
+$("dialog").addEventListener("close", () => releaseMedia($("dialogBody")));
 function showDialog(title, body, actions = []) {
+  releaseMedia($("dialogBody"));
   $("dialogTitle").textContent = title;
   $("dialogBody").replaceChildren(body);
   $("dialogActions").replaceChildren(...actions);
@@ -150,44 +193,11 @@ async function cardMedia(id) {
     wrap.append(
       el("p", "此卡没有可预览的本地媒体，请在导入报告查看缺失或不支持的资源。"),
     );
-  for (const a of card.assets) {
-    const item = el("figure"),
-      media = el(a.mime.startsWith("audio/") ? "audio" : "img");
-    media.src = "/assets/" + a.id;
-    if (media.tagName === "AUDIO") {
-      media.controls = true;
-      media.preload = "none";
-    } else {
-      media.alt = a.name;
-      media.loading = "lazy";
-    }
-    media.addEventListener(
-      "error",
-      () => item.append(el("p", "当前设备无法解码此媒体；原件仍保留。")),
-      { once: true },
-    );
-    item.append(
-      media,
-      el(
-        "figcaption",
-        a.name + " · " + a.mime + " · " + Math.ceil(a.size / 1024) + " KiB",
-      ),
-    );
-    wrap.append(item);
-  }
+  for (const asset of card.assets)
+    wrap.append(mediaFigure(asset, "/assets/" + asset.id));
   showDialog("本地素材 · " + card.name, wrap, [
     button("关闭", () => $("dialog").close()),
   ]);
-  $("dialog").addEventListener(
-    "close",
-    () => {
-      for (const media of wrap.querySelectorAll("audio")) {
-        media.pause();
-        media.removeAttribute("src");
-      }
-    },
-    { once: true },
-  );
 }
 async function cardReport(id) {
   const result = await api("/api/cards/" + id),
@@ -439,20 +449,13 @@ $("fileInput").onchange = () =>
       progress.remove();
       previewWrap.append(el("p", job.preview.card.firstMessage));
       const gallery = el("div", undefined, "media-gallery");
-      for (const a of job.preview.card.assets) {
-        const item = el("figure"),
-          media = el(a.mime.startsWith("audio/") ? "audio" : "img");
-        media.src = "/api/import-jobs/" + job.id + "/assets/" + a.id;
-        if (a.mime.startsWith("audio/")) {
-          media.controls = true;
-          media.preload = "none";
-        } else {
-          media.alt = a.name;
-          media.loading = "lazy";
-        }
-        item.append(media, el("figcaption", a.name));
-        gallery.append(item);
-      }
+      for (const asset of job.preview.card.assets)
+        gallery.append(
+          mediaFigure(
+            asset,
+            "/api/import-jobs/" + job.id + "/assets/" + asset.id,
+          ),
+        );
       previewWrap.append(gallery);
       for (const r of job.preview.report) {
         const item = el(
@@ -474,6 +477,7 @@ $("fileInput").onchange = () =>
         announce("已取消导入");
         return;
       }
+      releaseMedia(previewWrap);
       $("dialogActions").replaceChildren();
       status.textContent = "正在保存原件与资源…";
       const completed = await api("/api/import-jobs/" + job.id + "/accept", {});
@@ -486,6 +490,8 @@ $("fileInput").onchange = () =>
         return;
       }
       const wrap = el("div");
+      if (completed.warning)
+        wrap.append(el("p", completed.warning.message, "dialog-note"));
       wrap.append(
         el(
           "p",
@@ -522,7 +528,7 @@ $("fileInput").onchange = () =>
           "primary",
         ),
       ]);
-      announce("导入完成，请查看逐项迁移报告。");
+      announce(completed.warning?.message || "导入完成，请查看逐项迁移报告。");
     } catch (error) {
       if (job)
         await api("/api/import-jobs/" + job.id + "/cancel", {}).catch(() => {});
@@ -1608,6 +1614,7 @@ $("helpButton").onclick = () => {
   ]);
 };
 window.addEventListener("beforeunload", () => {
+  releaseMedia($("dialogBody"));
   state.active?.stream.close();
   clearTimeout(state.refreshTimer);
 });

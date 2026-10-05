@@ -1,0 +1,10 @@
+✔ supplemental jsdom: real app.js events + live HTTP/SSE/SQLite/DSH (not Chromium) (8357.523312ms)
+✔ media import previews actual image/audio bytes before acceptance and presents local audio controls (384.130027ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10283.763474

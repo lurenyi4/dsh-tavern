@@ -1,0 +1,15 @@
+✔ supplemental jsdom: real app.js events + live HTTP/SSE/SQLite/DSH (not Chromium) (6265.335205ms)
+✔ release R02: a fresh DOM resumes the same live SSE run, preserves selection and can cancel (1533.619195ms)
+✔ release R04: late author responses and pending player views never expose private DOM (105.928302ms)
+✔ knowledge UI uses live chapter commits and view-filtered search (130.467938ms)
+✔ author UI creates a stable new entity and inspects its isolated knowledge (138.232119ms)
+✔ M1 author audit stays out of player DOM, source search and exports after view switch (130.65231ms)
+✔ media import previews actual image/audio bytes before acceptance and presents local audio controls (303.603773ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8615.917845

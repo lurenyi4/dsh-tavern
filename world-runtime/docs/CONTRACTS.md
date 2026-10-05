@@ -80,3 +80,9 @@ Scheduled events compute effective time as max(current world time, dueAt), set i
 ### Local import jobs (Linux media slice)
 
 Interactive imports use create → binary upload → preparing → ready preview → explicit accept → registering → completed. Cancel/failed/interrupted are terminal; cancelling after atomic card publication returns completed. Preview assets are scoped to their job and disappear on cancellation/completion. Job IDs are host UUIDs, uploaded bytes are bounded and validated before registration, and previews never change a world's canonical state. Worker parsing has a 30-second bound; registration continues to use the shared importer lock and atomic card directory rename. Startup recovery runs only after the server's exclusive data-directory lock. Job files are staging/audit metadata, not an alternate canonical card store or backup input.
+
+### Media-review durability and capacity clarification
+
+Registration success and confirmed crash durability are separate. After rename, directory-sync failure returns completed plus IMPORT_DURABILITY; cancellation cannot unpublish that card. Job recovery checks the published card and retains the warning, or reports a missing publication. Before registration, a failed job remains unregistered and source cleanup can be retried independently of its primary error.
+
+storage-limits.mjs binds original admission and backup/restore per-file limits to64MiB. Both preview and locked registration check the current complete content footprint against128MiB/2000files, including copies and a conservative database+WAL estimate. Future world growth is still subject to the finite backup budget. Limits are never silently relaxed or satisfied by dropping originals/resources.

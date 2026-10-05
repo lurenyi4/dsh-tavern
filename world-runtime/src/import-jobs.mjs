@@ -15,6 +15,7 @@ import {
   importCard,
   readCard,
   recoverImportStorage,
+  checkImportBudget,
   IMPORT_LIMITS,
 } from "./importer.mjs";
 const terminal = new Set(["completed", "cancelled", "failed", "interrupted"]);
@@ -37,12 +38,32 @@ export class ImportJobs {
       const saved = JSON.parse(await readFile(join(self.root, name), "utf8"));
       if (saved.id + ".json" !== name)
         throw failure("CORRUPT_STORAGE", "导入记录不一致");
-      if (saved.status === "registering" && saved.cardId) {
+      if (
+        saved.cardId &&
+        (saved.status === "completed" ||
+          saved.status === "registering" ||
+          (["failed", "cancelled"].includes(saved.status) &&
+            saved.stage === "registering"))
+      ) {
         try {
           await readCard(dir, saved.cardId);
+          const uncertain = saved.status !== "completed";
           saved.status = "completed";
+          if (uncertain)
+            saved.warning ??= {
+              code: "IMPORT_DURABILITY",
+              message:
+                "重启已确认卡片注册存在，但上次持久化结果未确认；请保留原件并备份。",
+            };
         } catch (e) {
           if (e.code !== "CARD_NOT_FOUND") throw e;
+          if (saved.status === "completed") {
+            saved.status = "failed";
+            saved.error = {
+              code: "IMPORT_PUBLICATION_MISSING",
+              message: "上次记录的已注册卡片在重启后不存在；请从原件重新导入。",
+            };
+          }
         }
       }
       if (!terminal.has(saved.status)) saved.status = "interrupted";
@@ -53,6 +74,19 @@ export class ImportJobs {
       await self.save(j);
     }
     return self;
+  }
+  async cleanup(j) {
+    try {
+      await rm(join(this.root, j.id + ".upload"), { force: true });
+      delete j.cleanupWarning;
+      return true;
+    } catch (e) {
+      j.cleanupWarning = {
+        code: e.code || "IMPORT_CLEANUP",
+        message: "临时上传清理失败；取消或重启会重试。",
+      };
+      return false;
+    }
   }
   async save(j) {
     const previous = j.saving ?? Promise.resolve();
@@ -67,6 +101,8 @@ export class ImportJobs {
           status: j.status,
           stage: j.stage,
           error: j.error,
+          warning: j.warning,
+          cleanupWarning: j.cleanupWarning,
           cardId: j.result?.card.id || j.cardId,
         };
         const file = join(this.root, j.id + ".json");
@@ -86,6 +122,8 @@ export class ImportJobs {
       status: j.status,
       stage: j.stage,
       error: j.error,
+      warning: j.warning,
+      cleanupWarning: j.cleanupWarning,
       cardId: j.result?.card.id || j.cardId,
       preview: j.prepared
         ? { card: j.prepared.card, report: j.prepared.report }
@@ -201,6 +239,8 @@ export class ImportJobs {
           try {
             if (j.status !== "cancelled" && j.status !== "interrupted") {
               if (message.prepared) {
+                await checkImportBudget(this.dataDir, message.prepared, j.size);
+                if (j.controller.signal.aborted || this.closed) return;
                 j.prepared = message.prepared;
                 j.status = "ready";
               } else {
@@ -214,6 +254,12 @@ export class ImportJobs {
             j.status = "failed";
             j.error = { code: e.code || "IMPORT_STORAGE", message: e.message };
             delete j.prepared;
+            await this.cleanup(j);
+            try {
+              await this.save(j);
+            } catch {
+              /* Original persistence error remains visible; startup retries cleanup. */
+            }
           } finally {
             resolve();
           }
@@ -265,13 +311,14 @@ export class ImportJobs {
             j.stage = stage;
           },
         });
+        j.warning = j.result.warning;
         j.status = "completed";
       } catch (e) {
         j.status = j.controller.signal.aborted ? "cancelled" : "failed";
         j.error = { code: e.code || "IMPORT_FAILED", message: e.message };
       } finally {
         delete j.prepared;
-        await rm(join(this.root, id + ".upload"), { force: true });
+        await this.cleanup(j);
         await this.save(j);
       }
     })();
@@ -281,7 +328,11 @@ export class ImportJobs {
   async cancel(id) {
     const j = this.jobs.get(id);
     if (!j) throw failure("IMPORT_NOT_FOUND", "任务不存在");
-    if (terminal.has(j.status)) return this.get(id);
+    if (terminal.has(j.status)) {
+      await this.cleanup(j);
+      await this.save(j);
+      return this.get(id);
+    }
     j.controller.abort(failure("IMPORT_CANCELLED", "已取消导入"));
     if (j.status === "registering") {
       await j.work;
@@ -293,7 +344,7 @@ export class ImportJobs {
     await j.worker?.terminate();
     await j.work;
     delete j.prepared;
-    await rm(join(this.root, id + ".upload"), { force: true });
+    await this.cleanup(j);
     await this.save(j);
     return this.get(id);
   }
@@ -301,7 +352,12 @@ export class ImportJobs {
     if (this.closed) return;
     this.closed = true;
     for (const j of this.jobs.values()) {
-      if (terminal.has(j.status)) continue;
+      if (terminal.has(j.status)) {
+        const prior = j.cleanupWarning;
+        await this.cleanup(j);
+        if (prior || j.cleanupWarning) await this.save(j);
+        continue;
+      }
       if (j.status === "registering") {
         j.controller.abort();
         await j.work;
@@ -313,7 +369,7 @@ export class ImportJobs {
         await j.worker?.terminate();
         await j.work;
         delete j.prepared;
-        await rm(join(this.root, j.id + ".upload"), { force: true });
+        await this.cleanup(j);
         await this.save(j);
       }
     }

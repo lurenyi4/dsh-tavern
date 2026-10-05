@@ -221,3 +221,99 @@ test("cancel before atomic publication cleans only newly created resources and k
     [...new Set(before.card.assets.map((a) => a.id))].sort(),
   );
 });
+
+test("ready-record EIO releases upload and terminal cancel retries a transient cleanup failure", async (t) => {
+  const fs = await import("node:fs/promises"),
+    { syncBuiltinESMExports } = await import("node:module");
+  const { dir, jobs } = await setup(t),
+    save = jobs.save.bind(jobs);
+  let injected = false,
+    failedCleanup = false;
+  const originalRm = fs.default.rm;
+  jobs.save = async (j) => {
+    if (j.status === "ready" && !injected) {
+      injected = true;
+      throw Object.assign(new Error("Ready record persistence failed"), {
+        code: "EIO",
+      });
+    }
+    return save(j);
+  };
+  const bytes = Buffer.from(JSON.stringify(v2)),
+    j = await jobs.create({ filename: "ready.json", size: bytes.length });
+  fs.default.rm = async (path, ...args) => {
+    if (
+      path === join(dir, ".import-jobs", j.id + ".upload") &&
+      !failedCleanup
+    ) {
+      failedCleanup = true;
+      throw Object.assign(new Error("Temporary cleanup unavailable"), {
+        code: "EIO",
+      });
+    }
+    return originalRm(path, ...args);
+  };
+  syncBuiltinESMExports();
+  try {
+    await jobs.upload(j.id, Readable.from([bytes]));
+    await ready(jobs, j.id);
+    await jobs.jobs.get(j.id).work;
+    assert.equal(jobs.get(j.id).status, "failed");
+    assert.equal(jobs.get(j.id).error.code, "EIO");
+    assert.equal(jobs.get(j.id).cleanupWarning.code, "EIO");
+    await jobs.cancel(j.id);
+    assert.equal(jobs.get(j.id).cleanupWarning, undefined);
+    await assert.rejects(
+      readFile(join(dir, ".import-jobs", j.id + ".upload")),
+      { code: "ENOENT" },
+    );
+    assert.deepEqual(await listCards(dir), []);
+  } finally {
+    fs.default.rm = originalRm;
+    syncBuiltinESMExports();
+  }
+  await jobs.close();
+  const reopened = await ImportJobs.open(dir);
+  t.after(() => reopened.close());
+  assert.equal(reopened.get(j.id).status, "failed");
+  assert.equal(reopened.get(j.id).error.code, "EIO");
+});
+
+test(
+  "acceptance rejects media duplication beyond the bounded backup closure without affecting existing cards",
+  { timeout: 20000 },
+  async (t) => {
+    const { dir, jobs } = await setup(t);
+    const { silentWav } = await import("../fixtures/import-fixtures.mjs");
+    const { importCard } = await import("../src/importer.mjs");
+    const prior = await importCard({
+      filename: "prior.json",
+      bytes: Buffer.from(JSON.stringify(v2)),
+      dataDir: dir,
+    });
+    const sound = (value) => {
+      const bytes = Buffer.alloc(24 * 1024 * 1024 + 44, value);
+      silentWav().copy(bytes, 0, 0, 44);
+      bytes.writeUInt32LE(bytes.length - 8, 4);
+      bytes.writeUInt32LE(bytes.length - 44, 40);
+      return bytes;
+    };
+    const bytes = charx([
+      { name: "assets/a.wav", bytes: sound(1) },
+      { name: "assets/b.wav", bytes: sound(2) },
+    ]);
+    const j = await jobs.create({
+      filename: "large-media.charx",
+      size: bytes.length,
+    });
+    await jobs.upload(j.id, Readable.from([bytes]));
+    const done = await ready(jobs, j.id);
+    assert.equal(done.status, "failed");
+    assert.equal(done.error.code, "IMPORT_STORAGE_BUDGET");
+    await assert.rejects(jobs.accept(j.id), { code: "IMPORT_NOT_READY" });
+    assert.deepEqual(
+      (await listCards(dir)).map((c) => c.id),
+      [prior.card.id],
+    );
+  },
+);

@@ -1,3 +1,4 @@
+import {STORAGE_LIMITS} from './storage-limits.mjs';
 import { mkdir, open, lstat, readdir, rename, rm, link } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
@@ -177,6 +178,7 @@ export async function importCard({ filename, bytes, dataDir, normalizerVersion=2
     await rootDirectories(dataDir, true);
     const target = path.join(root, 'cards', prepared.card.id);
     try { const result = await readCard(root, prepared.card.id); add(result.report, 'original', 'preserved', '相同 SHA256 已导入，复用已注册卡片'); return result; } catch (error) { if (error.code !== 'CARD_NOT_FOUND') throw error; }
+    await checkImportBudget(root, prepared, input.length);
     staging = path.join(root, 'cards', `.staging-${randomUUID()}`); await mkdir(staging, { mode: 0o700 }); await mkdir(path.join(staging, 'resources'), { mode: 0o700 });
     await writeDurable(path.join(staging, 'original'), input);
     const written = new Set();
@@ -192,7 +194,8 @@ export async function importCard({ filename, bytes, dataDir, normalizerVersion=2
     await syncDirectory(path.join(root, 'assets')); await syncDirectory(staging);
     checkpoint("registering");
     try { await rename(staging, target); staging = null; registered=true; } catch (error) { if (!['EEXIST', 'ENOTEMPTY'].includes(error.code)) throw error; return await readCard(root, prepared.card.id); }
-    await syncDirectory(path.join(root, 'cards')); return { card: prepared.card, report: prepared.report };
+    try { await syncDirectory(path.join(root, 'cards')); } catch(error) { return { card: prepared.card, report: prepared.report, warning:{code:'IMPORT_DURABILITY',storageCode:error.code??'IO_ERROR',message:'卡片已注册，但目录持久化确认失败；请保留原件并备份，不能保证断电后的保存。'} }; }
+    return { card: prepared.card, report: prepared.report };
   } finally { try { if (staging) await rm(staging, { recursive: true, force: true }); if(!registered) for(const asset of createdAssets) await rm(asset,{force:true}); } finally { release(); if (LOCKS.get(root) === gate) LOCKS.delete(root); } }
 }
 export async function readCard(dataDir, id) {
@@ -239,4 +242,29 @@ export async function recoverImportStorage(dataDir) {
     await rm(path.join(root,'assets',entry.name));orphanAssets++;
   }
   return {staging,orphanAssets};
+}
+
+// Account for original + preserved resources + sanitized media, including already
+// registered content. This is current capacity, not a promise of unbounded worlds.
+export async function checkImportBudget(root, prepared, originalSize) {
+  const files=new Map();
+  async function visit(directory,prefix) {
+    for(const entry of await readdir(directory,{withFileTypes:true})) {
+      if(prefix==='cards'&&entry.name.startsWith('.staging-'))continue;
+      const target=path.join(directory,entry.name),name=prefix+'/'+entry.name;
+      if(entry.isSymbolicLink())fail('UNSAFE_STORAGE','容量检查拒绝链接');
+      if(entry.isDirectory())await visit(target,name);
+      else if(entry.isFile())files.set(name,(await lstat(target)).size);
+      else fail('UNSAFE_STORAGE','容量检查只支持普通文件');
+    }
+  }
+  await visit(path.join(root,'cards'),'cards');await visit(path.join(root,'assets'),'assets');
+  let database=0;for(const name of ['world.sqlite','world.sqlite-wal']){try{const info=await lstat(path.join(root,name));if(!info.isFile()||info.isSymbolicLink())fail('UNSAFE_STORAGE','数据库文件异常');database+=info.size;}catch(e){if(e.code!=='ENOENT')throw e;}}
+  if(database)files.set('world.sqlite',database);
+  const prefix='cards/'+prepared.card.id+'/';files.set(prefix+'original',originalSize);
+  for(const [name,value]of [['card.json',prepared.card],['report.json',prepared.report]]){const size=Buffer.byteLength(JSON.stringify(value));if(size>IMPORT_LIMITS.jsonBytes)fail('IMPORT_LIMIT','规范化元数据超过可备份JSON限制');files.set(prefix+name,size);}
+  for(const [id,bytes]of prepared.rawResources)files.set(prefix+'resources/'+id,bytes.length);
+  for(const [id,bytes]of prepared.mediaFiles)files.set('assets/'+id,bytes.length);
+  const size=[...files.values()].reduce((a,b)=>a+b,0);
+  if(files.size>STORAGE_LIMITS.backupFiles||size>STORAGE_LIMITS.backupBytes||[...files.values()].some(n=>n>STORAGE_LIMITS.backupFileBytes))fail('IMPORT_STORAGE_BUDGET','本次导入会超过128 MiB/2000文件完整备份预算（包括原件、资源副本和当前数据库），未注册；请使用新的数据目录。');
 }
