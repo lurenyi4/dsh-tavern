@@ -6,14 +6,14 @@ export function fail(code, message) { throw Object.assign(new Error(message), { 
 export const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const utf8 = new TextDecoder('utf-8', { fatal: true });
 export function decodeUtf8(bytes, code = 'INVALID_JSON') { try { return utf8.decode(bytes); } catch { fail(code, '数据包含无效 UTF-8'); } }
-export function parseJson(bytes, label = 'card.json') {
-  if (bytes.length > IMPORT_LIMITS.jsonBytes) fail('IMPORT_LIMIT', `${label} 超过 JSON 大小限制`);
+export function parseJson(bytes, label = 'card.json', limits = IMPORT_LIMITS) {
+  if (bytes.length > limits.jsonBytes) fail('IMPORT_LIMIT', `${label} 超过 JSON 大小限制`);
   let result; try { result = JSON.parse(decodeUtf8(bytes)); } catch (error) { if (error.code) throw error; fail('INVALID_JSON', `${label} 不是有效 JSON`); }
   let count = 0; const stack = [[result, 0]];
   while (stack.length) {
     const [value, depth] = stack.pop();
     if (typeof value === 'number' && !Number.isFinite(value)) fail('INVALID_JSON', `${label} 包含非有限数值`);
-    if (++count > IMPORT_LIMITS.jsonNodes || depth > IMPORT_LIMITS.jsonDepth) fail('IMPORT_LIMIT', `${label} 超过结构复杂度限制`);
+    if (++count > limits.jsonNodes || depth > limits.jsonDepth) fail('IMPORT_LIMIT', `${label} 超过结构复杂度限制`);
     if (value && typeof value === 'object') for (const [key, child] of Object.entries(value)) {
       if (['__proto__', 'prototype', 'constructor'].includes(key)) fail('UNSAFE_JSON', `${label} 包含禁止的属性键`);
       stack.push([child, depth + 1]);

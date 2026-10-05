@@ -51,16 +51,19 @@ for (const cancel of [false, true]) {
     await jobs.close();
     jobs = await ImportJobs.open(dir);
     assert.equal(jobs.get(j.id).status, "completed");
+    assert.equal(jobs.get(j.id).error, undefined);
     assert.equal(jobs.get(j.id).warning.code, "IMPORT_DURABILITY");
     await jobs.close();
     const recordPath = join(dir, ".import-jobs", j.id + ".json"),
       saved = JSON.parse(await fs.readFile(recordPath, "utf8"));
     saved.status = cancel ? "cancelled" : "failed";
     saved.stage = "registering";
+    saved.error = { code: "EIO", message: "old publication error" };
     delete saved.warning;
     await fs.writeFile(recordPath, JSON.stringify(saved));
     jobs = await ImportJobs.open(dir);
     assert.equal(jobs.get(j.id).status, "completed");
+    assert.equal(jobs.get(j.id).error, undefined);
     assert.equal(jobs.get(j.id).warning.code, "IMPORT_DURABILITY");
     await jobs.close();
     // Simulate loss of the unconfirmed directory entry after a power interruption.

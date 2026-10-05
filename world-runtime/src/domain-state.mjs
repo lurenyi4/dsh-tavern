@@ -1,3 +1,4 @@
+import { NORMALIZED_CARD_LIMITS } from "./storage-limits.mjs";
 import { recordIdentity } from "./run-identity.mjs";
 import { randomUUID } from "node:crypto";
 export function fail(code, message) {
@@ -67,11 +68,14 @@ export function jsonValue(
     nodes: 0,
   },
 ) {
-  if (depth > 32 || ++budget.nodes > 100000)
+  if (
+    depth > (budget.limits?.jsonDepth ?? 32) ||
+    ++budget.nodes > (budget.limits?.jsonNodes ?? 100000)
+  )
     fail("INVALID_INPUT", "JSON input is too complex");
   if (value === null || typeof value === "boolean") return;
   if (typeof value === "string") {
-    text(value, "JSON string", 1024 * 1024, true);
+    text(value, "JSON string", budget.limits?.stringChars ?? 1024 * 1024, true);
     return;
   }
   if (typeof value === "number") {
@@ -80,7 +84,8 @@ export function jsonValue(
     return;
   }
   if (Array.isArray(value)) {
-    if (value.length > 20000) fail("INVALID_INPUT", "JSON array too large");
+    if (value.length > (budget.limits?.arrayLength ?? 20000))
+      fail("INVALID_INPUT", "JSON array too large");
     if (
       Object.getPrototypeOf(value) !== Array.prototype ||
       Object.getOwnPropertySymbols(value).length
@@ -762,10 +767,12 @@ export function applyOperations(
 }
 export function initialState(card) {
   object(card, "card");
-  jsonValue(card);
-  if (Buffer.byteLength(JSON.stringify(card)) > 5 * 1024 * 1024)
+  jsonValue(card, 0, { nodes: 0, limits: NORMALIZED_CARD_LIMITS });
+  if (
+    Buffer.byteLength(JSON.stringify(card)) > NORMALIZED_CARD_LIMITS.jsonBytes
+  )
     fail("INVALID_INPUT", "Card is too large");
-  text(card.name, "card name", 512);
+  text(card.name, "card name", NORMALIZED_CARD_LIMITS.nameChars);
   if (card.description !== undefined)
     text(card.description, "description", 1024 * 1024, true);
   const state = {

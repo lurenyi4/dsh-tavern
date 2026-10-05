@@ -1,4 +1,5 @@
-import {STORAGE_LIMITS} from './storage-limits.mjs';
+import {initialState} from './domain-state.mjs';
+import {STORAGE_LIMITS, NORMALIZED_CARD_LIMITS} from './storage-limits.mjs';
 import { mkdir, open, lstat, readdir, rename, rm, link } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
@@ -141,6 +142,8 @@ export function prepareCard({ filename, bytes, normalizerVersion=2 }) {
   }
   if (data.assets) card.extensions._import.assetDeclarations = copy(data.assets);
   // Both metadata and all resource validation finish before filesystem mutation.
+  initialState(card);
+  parseJson(Buffer.from(JSON.stringify(report)),'report.json');
   return { card, report, rawResources: preservedFiles, mediaFiles };
 }
 async function checkedDirectory(target, create = false) {
@@ -203,7 +206,7 @@ export async function readCard(dataDir, id) {
   try {
     const root = await rootDirectories(dataDir), directory = path.join(root, 'cards', id); await checkedDirectory(directory);
     const cardBytes = await safeRead(path.join(directory, 'card.json')), reportBytes = await safeRead(path.join(directory, 'report.json'));
-    let card, report; try { card = JSON.parse(cardBytes.toString('utf8')); report = JSON.parse(reportBytes.toString('utf8')); } catch { fail('CORRUPT_STORAGE', '已保存角色卡元数据损坏'); }
+    let card, report; try { card = parseCardMetadata(cardBytes); report = parseJson(reportBytes,'report.json'); } catch { fail('CORRUPT_STORAGE', '已保存角色卡元数据损坏'); }
     if (card?.id !== id || card?.original?.sha256 !== id || !Array.isArray(report)) fail('CORRUPT_STORAGE', '角色卡记录身份不一致');
     return { card, report };
   } catch (error) { if (error.code === 'ENOENT') fail('CARD_NOT_FOUND', '角色卡不存在'); throw error; }
@@ -247,6 +250,8 @@ export async function recoverImportStorage(dataDir) {
 // Account for original + preserved resources + sanitized media, including already
 // registered content. This is current capacity, not a promise of unbounded worlds.
 export async function checkImportBudget(root, prepared, originalSize) {
+  initialState(prepared.card);
+  parseJson(Buffer.from(JSON.stringify(prepared.report)),'report.json');
   const files=new Map();
   async function visit(directory,prefix) {
     for(const entry of await readdir(directory,{withFileTypes:true})) {
@@ -267,4 +272,10 @@ export async function checkImportBudget(root, prepared, originalSize) {
   for(const [id,bytes]of prepared.mediaFiles)files.set('assets/'+id,bytes.length);
   const size=[...files.values()].reduce((a,b)=>a+b,0);
   if(files.size>STORAGE_LIMITS.backupFiles||size>STORAGE_LIMITS.backupBytes||[...files.values()].some(n=>n>STORAGE_LIMITS.backupFileBytes))fail('IMPORT_STORAGE_BUDGET','本次导入会超过128 MiB/2000文件完整备份预算（包括原件、资源副本和当前数据库），未注册；请使用新的数据目录。');
+}
+
+export function parseCardMetadata(bytes) {
+  const card=parseJson(bytes,'normalized card.json',NORMALIZED_CARD_LIMITS);
+  initialState(card);
+  return card;
 }

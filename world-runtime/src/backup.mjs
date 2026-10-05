@@ -4,7 +4,7 @@ import {join, resolve, dirname, sep, parse as parsePath} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {WorldStore} from './store.mjs';
-import {importCard} from './importer.mjs';
+import {importCard,parseCardMetadata} from './importer.mjs';
 import {parseJson, sniffMedia} from './import-formats.mjs';
 
 import {STORAGE_LIMITS} from './storage-limits.mjs';
@@ -41,7 +41,7 @@ function validRoster(ids){
  return Array.isArray(ids)&&ids.length<=Math.floor(COUNT/3)&&ids.every(id=>typeof id==='string'&&HASH.test(id))&&new Set(ids).size===ids.length;
 }
 function closure(message){fail('BACKUP_CLOSURE',message);}
-function json(bytes,label){try{return parseJson(bytes,label);}catch(error){closure(`${label} 格式不受支持（${error.code??'INVALID_JSON'}）`);}}
+function json(bytes,label){try{return label==='card.json'?parseCardMetadata(bytes):parseJson(bytes,label);}catch(error){closure(`${label} 格式不受支持（${error.code??'INVALID_JSON'}）`);}}
 
 /** Validate references, not merely checksums of the files that happen to be present.
  * Re-import each exact original in a disposable directory using the same bounded,

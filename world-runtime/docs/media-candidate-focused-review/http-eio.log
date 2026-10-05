@@ -1,0 +1,2 @@
+{"cancel":false,"actualHttp":true,"injected":true,"accept":"completed","storageCode":"EIO","restart":"completed","legacyError":{"code":"EIO","message":"Old release outcome"}}
+{"cancel":true,"actualHttp":true,"injected":true,"accept":"completed","storageCode":"EIO","restart":"completed","legacyError":{"code":"EIO","message":"Old release outcome"}}

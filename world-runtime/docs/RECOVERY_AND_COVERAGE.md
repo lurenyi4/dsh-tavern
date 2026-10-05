@@ -79,3 +79,7 @@ Separate branch from source172a8df: CAP-08 now has all validated local image/aud
 ### First media-review repair
 
 The f26cc35 slice was rejected by both independent reviewers. Their normal large-import backup and post-rename fsync findings are retained unchanged in media-focus-review and media-full-review. Shared64MiB per-file bounds,128MiB/2000-file current-footprint admission, truthful completed-with-durability-warning and restart reconciliation now address those paths. Failure cleanup and media lifecycle/decoder messages were also repaired. Final175unit/10HTTP+DOM checks pass; the original independent60MiB backup/restore test also passes unchanged. This does not self-close the review gate or any outstanding real-device/community-card/model-quality requirements.
+
+### Normalized-content follow-up
+
+The080b9dd full review found an ordinary normalized-card complexity mismatch plus upload cleanup lifecycle gaps. All three were reproduced before repair. A common normalized policy now governs preview/registration/read/world/backup/restore; normal5000-entry lorebooks and other valid structures survive complete HTTP backup/restore/reopen. Over-budget expansion is rejected before acceptance, without dropping raw values. Cleanup ownership survives history rotation and primary IO errors survive cleanup failures. Exact threshold tests and finite-budget rationale are documented in NORMALIZED_CONTENT_CONTRACT.md. A new independent review pair is still required; all original device/real-community-card/model-quality gates remain open.

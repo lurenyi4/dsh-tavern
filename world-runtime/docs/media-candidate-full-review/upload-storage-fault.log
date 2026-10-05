@@ -1,0 +1,20 @@
+{"returnedError":{"code":"EBUSY","message":"Cleanup temporarily busy"},"status":"uploading","storedError":null,"cleanupWarning":null}
+Explicit cancel recovers slot and removes upload
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Primary storage failure should survive cleanup failure
+
+undefined !== 'EIO'
+
+    at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/media-candidate-full-review/upload-storage-fault.mjs:9:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: 'EIO',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

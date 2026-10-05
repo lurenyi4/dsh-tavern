@@ -336,6 +336,7 @@ $("importButton").onclick = () =>
     const { jobs } = await api("/api/import-jobs");
     const active = jobs.find(
       (j) =>
+        j.cleanupWarning ||
         !["completed", "cancelled", "failed", "interrupted"].includes(j.status),
     );
     if (active) {
@@ -351,9 +352,15 @@ $("importButton").onclick = () =>
         [
           button("取消上次导入", () =>
             guarded(async () => {
-              await api("/api/import-jobs/" + active.id + "/cancel", {});
+              const cleaned = await api(
+                "/api/import-jobs/" + active.id + "/cancel",
+                {},
+              );
               $("dialog").close();
-              announce("已清理上次导入，请重新选择文件");
+              announce(
+                cleaned.cleanupWarning?.message ||
+                  "已清理上次导入，请重新选择文件",
+              );
             }),
           ),
           button("关闭", () => $("dialog").close()),

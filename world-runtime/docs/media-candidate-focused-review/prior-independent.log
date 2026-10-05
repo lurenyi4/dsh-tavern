@@ -1,0 +1,15 @@
+{"bytes":62917268,"elapsedMs":4547,"rss":501714944,"restored":true}
+✔ normal 60 MiB resources: preview remains unregistered, accept and backup restore retain exact bytes (6698.701394ms)
+✔ ordinary preparing cancellation releases worker and staging without registering (398.321344ms)
+✔ ordinary accept followed immediately by cancel is atomic and can be retried (135.876542ms)
+✔ ordinary 21 MiB accepted resource survives backup and restore (1696.681547ms)
+{"failure":"ready record save","remaining":["bfadc89f-cce0-4537-a752-f8babebc7876.json"]}
+✔ transient job-record persistence failure must release unregistered upload storage (112.249853ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9156.731525

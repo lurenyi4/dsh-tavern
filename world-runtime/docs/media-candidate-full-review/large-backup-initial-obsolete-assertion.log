@@ -1,0 +1,12 @@
+{"large":false,"originalBytes":2488,"importStatus":"completed","worldStatus":201,"backupStatus":200}
+small media backup restore passed
+{"large":true,"originalBytes":44042912,"importStatus":"completed","worldStatus":201,"backupStatus":200}
+file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/media-candidate-full-review/large-backup-restore.mjs:25
+ if(!large){assert.equal(backup.status,200);const file=join(temp,'small.json');await writeFile(file,JSON.stringify(backup.value));const restored=await restoreBackup(file,join(temp,'restored'));assert.ok(restored.files>0);console.log('small media backup restore passed');}else assert.equal(backup.value.error.code,'BACKUP_LIMIT');
+                                                                                                                                                                                                                                                                                                                    ^
+
+TypeError: Cannot read properties of undefined (reading 'code')
+    at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/media-candidate-full-review/large-backup-restore.mjs:25:309
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.19.0

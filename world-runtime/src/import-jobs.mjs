@@ -49,6 +49,7 @@ export class ImportJobs {
           await readCard(dir, saved.cardId);
           const uncertain = saved.status !== "completed";
           saved.status = "completed";
+          delete saved.error;
           if (uncertain)
             saved.warning ??= {
               code: "IMPORT_DURABILITY",
@@ -70,7 +71,7 @@ export class ImportJobs {
       const j = { ...saved, controller: new AbortController() };
 
       self.jobs.set(j.id, j);
-      await rm(join(self.root, j.id + ".upload"), { force: true });
+      await self.cleanup(j);
       await self.save(j);
     }
     return self;
@@ -103,6 +104,7 @@ export class ImportJobs {
           error: j.error,
           warning: j.warning,
           cleanupWarning: j.cleanupWarning,
+          closeWarning: j.closeWarning,
           cardId: j.result?.card.id || j.cardId,
         };
         const file = join(this.root, j.id + ".json");
@@ -124,6 +126,7 @@ export class ImportJobs {
       error: j.error,
       warning: j.warning,
       cleanupWarning: j.cleanupWarning,
+      closeWarning: j.closeWarning,
       cardId: j.result?.card.id || j.cardId,
       preview: j.prepared
         ? { card: j.prepared.card, report: j.prepared.report }
@@ -176,8 +179,19 @@ export class ImportJobs {
     for (const old of [...this.jobs.values()]
       .filter((j) => terminal.has(j.status))
       .slice(0, Math.max(0, this.jobs.size - 49))) {
+      if (!(await this.cleanup(old))) {
+        await this.save(old);
+        continue;
+      }
       await rm(join(this.root, old.id + ".json"), { force: true });
       this.jobs.delete(old.id);
+    }
+    if (this.jobs.size > 50) {
+      this.jobs.delete(j.id);
+      throw failure(
+        "IMPORT_CLEANUP_PENDING",
+        "导入临时文件尚未清理，请重试取消或重启后再导入。",
+      );
     }
     await this.save(j);
     return this.get(j.id);
@@ -277,12 +291,23 @@ export class ImportJobs {
       });
       return this.get(id);
     } catch (e) {
-      await file?.close();
-      await rm(path, { force: true });
       if (!["cancelled", "interrupted"].includes(j.status)) {
         j.status = "failed";
         j.error = { code: e.code || "IMPORT_FAILED", message: e.message };
+      }
+      try {
+        await file?.close();
+      } catch (closeError) {
+        j.closeWarning = {
+          code: closeError.code || "IMPORT_CLOSE",
+          message: closeError.message,
+        };
+      }
+      await this.cleanup(j);
+      try {
         await this.save(j);
+      } catch {
+        /* Keep the original receive error; startup reconciles the journal. */
       }
       throw e;
     }

@@ -1,0 +1,19 @@
+{"case":"transient cancel cleanup, then normal record retention","fault":true,"recordRetained":false,"uploadAfterRestart":true,"remainingUploadBytes":44}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expired job must not lose cleanup ownership
+
+true !== false
+
+    at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/docs/media-candidate-full-review/storage-fault-lifecycle.mjs:19:9 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

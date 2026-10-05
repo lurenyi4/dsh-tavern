@@ -1,0 +1,77 @@
+✔ B04: deleting only a PNG asset manifest entry rejects before target publication (94.450722ms)
+▶ each registered card requires card, report, original, and every preserved resource
+  ✔ card.json (12.235749ms)
+  ✔ report.json (20.536257ms)
+  ✔ original (15.111346ms)
+  ✔ e37630e68e600c835103e393f8deff8c8ed6e5c18a9fcccb470cabaf6cd2ca95 (16.77263ms)
+  ✔ e37630e68e600c835103e393f8deff8c8ed6e5c18a9fcccb470cabaf6cd2ca95 (32.48694ms)
+  ✔ 8e57f10f60559d18b98887a3b60498c10b8cede3c0f0fde0c8ff6145e3228487 (26.931011ms)
+  ✔ ea83eb606b9eb625deb7de74ccbf9dbcb3ad5a47aad0c3bb3f0365df1f0d7538 (16.874399ms)
+  ✔ 8d9b4b794affc5daf4eafa12e0c6294ab31aaeed330886145676bd6b832e8b98 (14.434386ms)
+  ✔ 3d07a18a6da3680f75b86f555bf942e97b9874d31937bc3a68f532e883922d6c (22.615834ms)
+✔ each registered card requires card, report, original, and every preserved resource (221.180036ms)
+✔ standalone cards retain a complete registration and dependency closure (52.696616ms)
+▶ rehashing modified normalized paths, identities, declarations, reports, or source still fails closure
+  ✔ card identity (11.919307ms)
+  ✔ original identity (11.869203ms)
+  ✔ original path (9.11477ms)
+  ✔ asset path (27.00197ms)
+  ✔ asset hash (17.502332ms)
+  ✔ asset MIME (12.577894ms)
+  ✔ resource path (20.864332ms)
+  ✔ resource size (18.891608ms)
+  ✔ removed resource declaration (10.383815ms)
+  ✔ removed media declaration (11.034144ms)
+✔ rehashing modified normalized paths, identities, declarations, reports, or source still fails closure (200.425201ms)
+✔ dangling world card registrations and changed world resource metadata reject (60.052469ms)
+✔ complete PNG/CharX/unsupported resources roundtrip preserves bytes, greetings, branches and resets receipts (96.072452ms)
+✔ manifest corruption, unknown schema, missing roster and unsafe extra paths fail without artifacts (25.876824ms)
+✔ creating an app backup rejects minimal unregistered WorldStore fixture cards (21.44607ms)
+✔ backup creation detects missing source dependencies and empty registrations, and skips unfinished import staging (38.963701ms)
+✔ existing directories and dangling destination links are never replaced (14.773076ms)
+✔ unreferenced media must remain hash-addressed sanitized safe media, while undeclared raw resources reject (54.277084ms)
+✔ unknown manifest fields, duplicate registrations and members, and symbolic-link input are refused (21.446932ms)
+✔ empty-world backups are valid but incomplete standalone card registrations cannot be exported (10.058394ms)
+✔ binary upload previews without registration, explicit accept preserves exact original and duplicate identity (117.738512ms)
+✔ preview cancellation and malformed upload leave existing content intact and permit retry (184.493148ms)
+✔ incomplete transfer fails atomically and startup records interrupted imports (16.985459ms)
+✔ resource preview is local, cancellation removes staging and startup cleans only unreferenced media (101.816284ms)
+✔ cancelling an in-flight upload releases the slot and does not register partial bytes (6.273404ms)
+✔ a 21 MiB CharX uploads in bounded chunks, retains unknown binary and remains usable after reopen (1503.491515ms)
+✔ process termination after preview leaves an interrupted job and no partially registered card (143.792793ms)
+✔ cancel before atomic publication cleans only newly created resources and keeps earlier card media (23.019424ms)
+✔ ready-record EIO releases upload and terminal cancel retries a transient cleanup failure (79.015448ms)
+✔ acceptance rejects media duplication beyond the bounded backup closure without affecting existing cards (1634.378384ms)
+✔ ST v1/v2/v3 map narrative fields and preserve unknown values exactly (71.772395ms)
+✔ duplicate content has one stable registration even concurrently; changed content is separate (31.87661ms)
+✔ PNG metadata tEXt/zTXt/iTXt valid; chara plus compatible ccv3 prefers v3; preview contains no metadata (40.83252ms)
+✔ PNG rejects conflicting metadata, duplicate conflicting keys, corrupted CRC, broken JSON, missing metadata (8.014055ms)
+✔ CharX preserves exact module/resources, deduplicates safe media, blocks active MIME and marks missing/remote assets (16.698284ms)
+✔ CharX accepts deflate and directory entries (12.942994ms)
+✔ unsafe archive paths, symlinks, encryption, duplicate entry names, missing card reject whole import (10.409087ms)
+✔ raw, expanded, entry-count, depth, ratio and PNG pixel limits are enforced before registration (18.613227ms)
+✔ malformed JSON, invalid critical data, dangerous keys and unrecognized formats reject atomically (8.299377ms)
+✔ card/asset IDs never become trusted filesystem paths; symlinked stores fail closed (3.836075ms)
+✔ fixed Risu legacy module decodes metadata, worldbook override and media; scripts remain disabled (8.817572ms)
+✔ module future versions and truncated resources are preserved with explicit unsupported report (20.960193ms)
+✔ ZIP corruption, central/local mismatch, unsupported compression, and appended garbage fail closed (4.086926ms)
+✔ deep JSON, noncanonical base64 and malformed media cannot become registered usable resources (7.209056ms)
+✔ safe audio is byte-sniffed and immutable; asset file mutation and symlinks are rejected (9.856321ms)
+✔ module resource names never overwrite same-named archive resources; every preserved hash remains readable (8.664365ms)
+✔ advanced lorebook activation and old variable templates are preserved but explicitly disabled (4.708834ms)
+✔ storage publication failure removes staging without registering a partial card or harming prior imports (14.463924ms)
+✔ noncanonical base64 and PNG declared pixel rows with inconsistent data reject (1.995136ms)
+{"large":false,"originalBytes":2488,"importStatus":"completed","worldStatus":201,"backupStatus":200}
+small media backup restore passed
+{"large":true,"originalBytes":44042912,"importStatus":"completed","worldStatus":201,"backupStatus":200}
+large media backup restore passed
+✔ world-runtime/test/media-backup.test.mjs (6732.02113ms)
+✔ world-runtime/test/media-publication.test.mjs (332.145091ms)
+ℹ tests 63
+ℹ suites 0
+ℹ pass 63
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6749.073352
