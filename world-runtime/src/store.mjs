@@ -245,17 +245,15 @@ export class WorldStore {
           this.#db
             .prepare("UPDATE metadata SET value=? WHERE key='version'")
             .run(String(VERSION));
-          this.#db
-            .prepare("INSERT INTO metadata VALUES(?,?)")
-            .run(
-              "migration:v1-v2",
-              JSON.stringify({
-                from: 1,
-                to: 2,
-                backupName,
-                createdAt: new Date().toISOString(),
-              }),
-            );
+          this.#db.prepare("INSERT INTO metadata VALUES(?,?)").run(
+            "migration:v1-v2",
+            JSON.stringify({
+              from: 1,
+              to: 2,
+              backupName,
+              createdAt: new Date().toISOString(),
+            }),
+          );
           this.#db.exec(`PRAGMA user_version=${VERSION}; COMMIT`);
         } catch (migrationError) {
           this.#db.exec("ROLLBACK");
@@ -586,6 +584,30 @@ export class WorldStore {
       return saved;
     });
   }
+  reserveRunIdentity(worldId, branchId, runId) {
+    identifier(runId, "runId");
+    return this.#tx(() => {
+      this.#world(worldId);
+      this.#branch(worldId, branchId);
+      if (
+        !this.#db
+          .prepare(
+            "SELECT 1 FROM runs WHERE world_id=? AND branch_id=? AND run_id=?",
+          )
+          .get(worldId, branchId, runId)
+      )
+        fail("UNKNOWN_RUN", "Reserve identity only for an accepted run");
+      const key = "run-identity:" + JSON.stringify([worldId, branchId, runId]);
+      const row = this.#db
+        .prepare("SELECT value FROM metadata WHERE key=?")
+        .get(key);
+      if (row) return row.value;
+      const seed = randomUUID();
+      this.#db.prepare("INSERT INTO metadata VALUES(?,?)").run(key, seed);
+      return seed;
+    });
+  }
+  // Compatibility for drafts saved by the entity-only identity implementation.
   reserveRunEntityIds(worldId, branchId, runId) {
     identifier(runId, "runId");
     return this.#tx(() => {
@@ -612,7 +634,7 @@ export class WorldStore {
       return ids;
     });
   }
-  #commit(input, transform) {
+  #commit(input, transform, effectiveTime) {
     const w = this.#world(input.worldId),
       b = this.#branch(input.worldId, input.branchId);
     const fingerprint = hash(input);
@@ -647,11 +669,17 @@ export class WorldStore {
       fail("STALE_SOURCE", "The source revision changed");
     const commitId = randomUUID();
     const state = JSON.parse(b.state_json);
+    if (effectiveTime !== undefined)
+      state.time = integer(effectiveTime, "effective event time", state.time);
+    const identity = this.#db
+      .prepare("SELECT value FROM metadata WHERE key=?")
+      .get("run-identity:" + JSON.stringify([w.id, b.id, input.runId]));
     const reservation = this.#db
       .prepare("SELECT value FROM metadata WHERE key=?")
       .get("entity-reservations:" + JSON.stringify([w.id, b.id, input.runId]));
     applyOperations(state, input.operations, {
       commitId,
+      identitySeed: identity?.value,
       entityIds: reservation ? JSON.parse(reservation.value) : undefined,
       author: input.author,
     });
@@ -920,6 +948,8 @@ export class WorldStore {
         state = JSON.parse(b.state_json);
         const current = state.schedules.find((s) => s.id === schedule.id);
         if (current.status !== "pending") continue;
+        const effectiveTime = Math.max(state.time, current.at);
+        state.time = effectiveTime;
         let valid = true,
           cancellationReason = null;
         try {
@@ -984,14 +1014,17 @@ export class WorldStore {
           source: "schedule",
           author: false,
         });
-        this.#commit(normalized, (next) => {
-          next.time = Math.max(next.time, current.at);
-          const item = next.schedules.find((s) => s.id === current.id);
-          item.status = valid ? "executed" : "cancelled";
-          if (!valid)
-            item.cancellationReason =
-              cancellationReason || "ACTOR_PRECONDITION_CHANGED";
-        });
+        this.#commit(
+          normalized,
+          (next) => {
+            const item = next.schedules.find((s) => s.id === current.id);
+            item.status = valid ? "executed" : "cancelled";
+            if (!valid)
+              item.cancellationReason =
+                cancellationReason || "ACTOR_PRECONDITION_CHANGED";
+          },
+          effectiveTime,
+        );
         (valid ? executed : cancelled).push(current.id);
       }
       b = this.#branch(w.id, b.id);

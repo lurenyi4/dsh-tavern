@@ -1,0 +1,1 @@
+{"calls":1,"seenId":"a2faeca1-80f9-4738-a6b3-e1883f7974d5","events":"event: draft\ndata: {\"text\":\"两人告别，同行结束。\"}\n\nevent: error\ndata: {\"code\":\"UNKNOWN_REFERENCE\",\"message\":\"Relation is not in the current branch\"}\n\n","scenes":0,"relations":0}

@@ -250,12 +250,12 @@ export async function startServer({
           const original = store.snapshot(run.worldId, run.branchId),
             card = original.world.card;
           const allocation = {
-            entityIds: store.reserveRunEntityIds(
+            identitySeed: store.reserveRunIdentity(
               run.worldId,
               run.branchId,
               run.runId,
             ),
-            entityCursor: { index: 0 },
+            operationCursor: { index: 0 },
           };
           const input = runBehaviors(
               card,

@@ -310,6 +310,18 @@ function compactState(state, userText) {
       }),
       1800,
     ),
+    schedules: boundedArray(
+      state.schedules,
+      (q) => ({
+        id: q.id,
+        at: q.at,
+        entityId: q.entityId,
+        label: clip(q.label, 160),
+        status: q.status,
+        goalId: q.goalId ?? null,
+      }),
+      1200,
+    ),
     inventory: boundedArray(
       state.inventory,
       (x) => ({

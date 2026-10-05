@@ -186,7 +186,13 @@ export function runBehaviors(
   canonical,
   event,
   input,
-  { actorId = "player", entityIds, entityCursor = { index: 0 } } = {},
+  {
+    actorId = "player",
+    identitySeed,
+    operationCursor = { index: 0 },
+    entityIds,
+    entityCursor = { index: 0 },
+  } = {},
 ) {
   if (!events.has(event)) fail("BEHAVIOR_STAGE", "Unknown lifecycle event");
   if (
@@ -227,6 +233,8 @@ export function runBehaviors(
       applyOperations(state, rule.operations, {
         author: false,
         dryRun: true,
+        identitySeed,
+        operationCursor,
         entityIds,
         entityCursor,
       });

@@ -79,3 +79,13 @@ Library原Linux包恢复；本轮重新安装锁定runtime及开发依赖，未�
 对实际改动模块使用固定官方Prettier3.6.2格式化。行数增加主要是展开原一行式代码便于审查，不是新增框架或运行依赖。原ADR、LICENSE、来源声明不改。格式化后再跑真实回归；新测试记录见当前验证文件。
 
 仍未关闭原目标：Android原生桥、Win/mac实机、真实Chromium、全资源媒体体验/大导入取消与移动内存、真实模型质量费用。没有以scope改写消掉这些门，没有push/Issue/Release/Pages。
+
+## 2026-10-05 第三轮：cycle2独立审查后的两项Major
+
+cycle2两份原报告/各自执行日志保留在cycle2-focused-review与cycle2-full-review，不改原结论。并行DOM审核改写的三份e2e-evidence JSON未被git restore；本轮重跑生成最新证据，前轮独立日志保留。
+
+S2-01先以真实本地HTTP复现before_generate建关系→模型读取合法ID→update/end→保存失败草稿→重开结算仍UNKNOWN_REFERENCE。修复不是关系专用计数：宿主持久化一个run UUID命名空间，按保存的扁平operation位置派生UUIDv5；所有会新建的实体/关系/事实/目标/伏笔/日程/资料主ID与来源修订统一使用此机制。去重不分配新记录，后续操作位置不因去重分配次数改变；外部操作仍不能指定新对象ID。旧entity-only预留只保留兼容读取，不用于新生成。实际HTTP注入after-state事务失败后，重开仅重试结算成功且模型请求仍1次；多记录族、取消、关系结束再建立均有回归。
+
+S2-02先测出due=10关系/认知时态却为0。现在每个到期事件先取effectiveTime=max(当前世界时间,dueAt)，在同一advance事务的计算状态和commit写状态中先设时刻，再校验/应用delta。没有提前发布独立时钟commit。覆盖10/15锁取消/20多事件、25结束时刻、reopen、10时fork、恢复的overdue队列及第二事件写入失败整体回滚。
+
+新增run-identity小函数和一项持久namespace，不建通用框架/每类分配表。原ADR、许可与完整目标未改。Android原生/Winmac/Chromium、大媒体/生态/真实模型质量门仍open；没有push。

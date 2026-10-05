@@ -1,3 +1,4 @@
+import { recordIdentity } from "./run-identity.mjs";
 import { randomUUID } from "node:crypto";
 export function fail(code, message) {
   const error = new Error(message);
@@ -252,6 +253,8 @@ export function applyOperations(
     author = false,
     scheduled = false,
     dryRun = false,
+    identitySeed,
+    operationCursor = { index: 0 },
     entityIds,
     entityCursor = { index: 0 },
   } = {},
@@ -259,6 +262,13 @@ export function applyOperations(
   if (!Array.isArray(operations) || operations.length > 100)
     fail("INVALID_INPUT", "Operations must be an array with at most 100 items");
   for (const op of operations) {
+    const operationIndex = operationCursor.index++;
+    const allocateId = (family) =>
+      identitySeed
+        ? recordIdentity(identitySeed, operationIndex, family)
+        : family === "entity" && entityIds
+          ? entityIds[entityCursor.index++]
+          : randomUUID();
     object(op, "operation");
     text(op.op, "op", 64);
     if (!Object.hasOwn(FIELDS, op.op))
@@ -293,9 +303,7 @@ export function applyOperations(
           visibility(op.descriptionVisibility);
         if (op.holderId !== undefined) entity(state, op.holderId);
         if (op.locked !== undefined) bool(op.locked, "locked");
-        const allocatedId =
-          old?.id ??
-          (entityIds ? entityIds[entityCursor.index++] : randomUUID());
+        const allocatedId = old?.id ?? allocateId("entity");
         identifier(allocatedId, "allocated entity ID");
         if (!old && state.characters.some((c) => c.id === allocatedId))
           fail("ENTITY_CONFLICT", "Allocated entity already exists");
@@ -364,13 +372,13 @@ export function applyOperations(
         if (!old && state.references.length >= 128)
           fail("STATE_LIMIT", "Reference limit exceeded");
         const value = {
-          id: old?.id ?? randomUUID(),
+          id: old?.id ?? allocateId("record"),
           title: op.title,
           text: op.text,
           visibility: visibility(op.visibility ?? old?.visibility),
           holderId:
             op.holderId === undefined ? (old?.holderId ?? null) : op.holderId,
-          sourceRevision: randomUUID(),
+          sourceRevision: allocateId("revision"),
           sourceCommitId: commitId ?? null,
           kind: "reference-not-canon",
         };
@@ -437,7 +445,7 @@ export function applyOperations(
           break;
         }
         state.relations.push({
-          id: randomUUID(),
+          id: allocateId("record"),
           from: op.from,
           to: op.to,
           type: op.type,
@@ -478,7 +486,7 @@ export function applyOperations(
         if ((old?.locked || op.locked === true) && !author)
           fail("LOCKED_FACT", "Locked facts require an explicit author action");
         const value = {
-          id: old?.id ?? randomUUID(),
+          id: old?.id ?? allocateId("record"),
           key: op.key,
           value: op.value,
           visibility: op.visibility ?? old?.visibility ?? "public",
@@ -541,7 +549,7 @@ export function applyOperations(
         )
           fail("INVALID_INPUT", "Invalid goal status");
         const value = {
-          id: old?.id ?? randomUUID(),
+          id: old?.id ?? allocateId("record"),
           entityId: op.entityId,
           text: op.text,
           status,
@@ -663,7 +671,7 @@ export function applyOperations(
             ? null
             : findById(state.plotThreads, op.id, "Plot thread");
         const value = {
-          id: old?.id ?? randomUUID(),
+          id: old?.id ?? allocateId("record"),
           label: op.label,
           status: op.status,
           sourceCommitId: commitId ?? null,
@@ -711,7 +719,7 @@ export function applyOperations(
           dryRun: true,
         });
         const value = {
-          id: old?.id ?? randomUUID(),
+          id: old?.id ?? allocateId("record"),
           at: op.at,
           entityId: op.entityId,
           label: op.label,

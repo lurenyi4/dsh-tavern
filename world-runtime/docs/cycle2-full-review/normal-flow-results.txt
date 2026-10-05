@@ -1,0 +1,2 @@
+SCHEDULE_TIME {"time":10,"relations":[{"type":"同事","status":"ended","validFrom":0,"validUntil":0},{"type":"朋友","status":"active","validFrom":0,"validUntil":null}],"knownSince":0}
+STAGED_ID {"error":"UNKNOWN_REFERENCE","message":"Relation is not in the current branch","head":null}

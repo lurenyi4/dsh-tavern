@@ -70,3 +70,9 @@ All attempts remain accounted for. Missing usage is unknown; manual price estima
 ## Still-open acceptance gates
 
 Real Chromium is environment-blocked. macOS/Windows are not run on those systems; Windows directory flush remains unverified. Android WorldMode APK/content-URI/storage integration is not implemented. Broad licensed-card media/behavior samples and large-import cancellation/target-memory tests remain open. Real model quality/cache/cost evaluation needs explicit budget and human review. No optional hot-unload or full old-plugin compatibility is claimed.
+
+## Cycle3 identity/time clarification
+
+New runs reserve one host UUID namespace via `reserveRunIdentity`. Each operation has its immutable position in the saved flattened proposal; UUIDv5 names give newly allocated primary records stable IDs through staging, all lifecycle stages, failed commit, restart and settlement retry. The allocator covers all ID-bearing record families, not only entities. The old `reserveRunEntityIds` metadata remains a compatibility path for earlier entity-only drafts. Reordering a saved proposal is not a supported settlement retry; changed committed payloads still conflict.
+
+Scheduled events compute effective time as max(current world time, dueAt), set it before validator/reducer evaluation, and write it with that event in the same transaction. Thus relationship validFrom/validUntil and cognition knownSince are event-time values. Expected locked/invalid events are cancelled at their effective time; storage faults roll back the advance transaction, including time and previously tentative events.
