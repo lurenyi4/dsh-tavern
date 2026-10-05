@@ -1,0 +1,26 @@
+✔ binary upload previews without registration, explicit accept preserves exact original and duplicate identity (126.047922ms)
+✔ preview cancellation and malformed upload leave existing content intact and permit retry (164.642013ms)
+✔ incomplete transfer fails atomically and startup records interrupted imports (17.59695ms)
+✔ resource preview is local, cancellation removes staging and startup cleans only unreferenced media (124.453948ms)
+✔ cancelling an in-flight upload releases the slot and does not register partial bytes (6.808285ms)
+✔ a 21 MiB CharX uploads in bounded chunks, retains unknown binary and remains usable after reopen (1478.258307ms)
+✔ process termination after preview leaves an interrupted job and no partially registered card (167.148449ms)
+✔ cancel before atomic publication cleans only newly created resources and keeps earlier card media (40.287079ms)
+✔ ready-record EIO releases upload and terminal cancel retries a transient cleanup failure (92.303405ms)
+✔ acceptance rejects media duplication beyond the bounded backup closure without affecting existing cards (1890.318364ms)
+✔ world-runtime/test/media-publication.test.mjs (355.872699ms)
+✔ upload writeFile failure retains primary error through cleanup failure and restart (27.568801ms)
+✔ upload sync failure retains primary error through cleanup failure and restart (10.108229ms)
+✔ upload close failure retains primary error through cleanup failure and restart (7.943331ms)
+✔ worker INVALID_JSON survives cleanup_once and retry/reopen (106.847225ms)
+✔ worker INVALID_JSON survives cleanup_persistent and retry/reopen (75.245071ms)
+✔ worker INVALID_JSON survives save_once and retry/reopen (74.782131ms)
+✔ worker INVALID_JSON survives save_persistent and retry/reopen (81.122141ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4240.822868

@@ -35,3 +35,7 @@ Receive errors, worker parser/timeout failures, and errors saving a ready result
 ### Completion is separate from terminal status
 
 A visible failed/cancelled/completed status can precede the final asynchronous journal write. Terminal close, cancel and history reclamation now await the existing upload/worker/journal completion; close/history also join an already-running cancellation. Cancel's own internal wait excludes itself. Repeated close returns the same completion promise, and new cancellation is refused once shutdown starts. Rejected receive promises already have primary errors recorded; rejected finalization promises are retained as persistence diagnostics. This closes the e327359 CI shutdown race; it does not change the normalized-content or backup limits.
+
+### Service closure supersedes snapshot-only joining
+
+IMPORT_SERVICE_LIFECYCLE.md defines the complete admission/operation boundary added after1265570 review. All public import mutations and internal worker producers are owned until settled; closure stops admission and drains them before final cleanup. History reserves its old journal before joining writers. Persistence failure is distinct from publication and cannot bypass service disposal. Earlier snapshot-joining notes describe historical repairs, not the complete current closure guarantee.

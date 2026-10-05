@@ -1,0 +1,2 @@
+{"close":"rejected","error":"EIO","acceptHTTP":400,"serverStillListening":true,"lockExists":true,"registeredCards":1}
+second app.close returned; server still listening: true

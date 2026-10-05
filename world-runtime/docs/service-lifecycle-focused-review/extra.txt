@@ -1,0 +1,16 @@
+✔ published terminal close waits and retains card identity (132.14703ms)
+✔ published terminal cancel waits and retains card identity (104.363735ms)
+✔ published terminal history waits and retains card identity (168.244476ms)
+✔ receive failure close waits pending failure journal (35.044771ms)
+✔ receive failure cancel waits pending failure journal (37.290783ms)
+✔ overlapping active upload cancellations and close settle without deadlock (4.632943ms)
+✔ terminal close retries a finalization journal failure and keeps primary error (66.803174ms)
+✔ malformed worker close stress leaves no late filesystem writers (3878.912878ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4529.635769

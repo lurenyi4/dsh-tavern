@@ -1,0 +1,82 @@
+✖ terminal close awaits the worker journal already in progress (128.063654ms)
+✖ terminal cancel awaits the worker journal already in progress (117.4584ms)
+✖ terminal history awaits the worker journal already in progress (161.038725ms)
+✖ close also waits for an already-running cancellation journal without self-await (53.684733ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 554.212312
+
+✖ failing tests:
+
+test at ../../ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:9:3
+✖ terminal close awaits the worker journal already in progress (128.063654ms)
+  AssertionError [ERR_ASSERTION]: terminal status is not proof that journal finalization ended
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:59:16)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:9:3
+✖ terminal cancel awaits the worker journal already in progress (117.4584ms)
+  AssertionError [ERR_ASSERTION]: terminal status is not proof that journal finalization ended
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:59:16)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:9:3
+✖ terminal history awaits the worker journal already in progress (161.038725ms)
+  AssertionError [ERR_ASSERTION]: terminal status is not proof that journal finalization ended
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:59:16)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:91:1
+✖ close also waits for an already-running cancellation journal without self-await (53.684733ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/ci-close-focus/parent/world-runtime/test/import-finalization.test.mjs:112:12)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

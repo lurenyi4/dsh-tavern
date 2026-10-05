@@ -144,7 +144,8 @@ export async function startServer({
     jobs = new Set(),
     auto = new Map(),
     hostErrors = new Map();
-  let stopped = false;
+  let stopped = false,
+    closeWork;
   const prices = manualPrices(env),
     contextHistory = new Map(),
     contextReports = new Map();
@@ -466,6 +467,10 @@ export async function startServer({
     }
     imports = await ImportJobs.open(dataDir);
     server = http.createServer(async (req, res) => {
+      if (stopped)
+        return json(res, 503, {
+          error: { code: "SERVER_CLOSING", message: "服务正在关闭" },
+        });
       res.setHeader("x-content-type-options", "nosniff");
       res.setHeader("referrer-policy", "no-referrer");
       res.setHeader(
@@ -1021,50 +1026,60 @@ export async function startServer({
       server.once("error", no);
       server.listen(port, host, yes);
     });
-    const timer = setInterval(async () => {
-      if (stopped) return;
-      for (const a of auto.values()) {
-        if (!a.enabled) continue;
-        if (Date.now() >= a.endsAt || a.remainingEvents <= 0) {
-          a.enabled = false;
-          continue;
-        }
-        if (busy(a.worldId, a.branchId)) continue;
-        try {
-          const s = store.snapshot(a.worldId, a.branchId),
-            to = a.startedTime + Math.floor((Date.now() - a.startedAt) / 1000);
-          const due = s.state.schedules.filter(
-            (x) => x.status === "pending" && x.at <= to,
-          );
-          if (!due.length) continue;
-          const player = due.some(
-            (x) =>
-              x.entityId === "player" ||
-              x.operations.some(
-                (o) => o.entityId === "player" || o.from === "player",
-              ),
-          );
-          if (player) {
+    const timer = setInterval(() => {
+      const tick = (async () => {
+        if (stopped) return;
+        for (const a of auto.values()) {
+          if (stopped) break;
+          if (!a.enabled) continue;
+          if (Date.now() >= a.endsAt || a.remainingEvents <= 0) {
             a.enabled = false;
-            a.lastError = {
-              code: "PLAYER_DECISION_REQUIRED",
-              message: "日程涉及玩家选择，自动推进已暂停。",
-            };
             continue;
           }
-          const result = store.advance({
-            worldId: a.worldId,
-            branchId: a.branchId,
-            to,
-            maxEvents: a.remainingEvents,
-          });
-          a.remainingEvents -= result.executed.length + result.cancelled.length;
-          await drain(a.worldId, a.branchId);
-        } catch (e) {
-          a.enabled = false;
-          a.lastError = safeError(e);
+          if (busy(a.worldId, a.branchId)) continue;
+          try {
+            const s = store.snapshot(a.worldId, a.branchId),
+              to =
+                a.startedTime + Math.floor((Date.now() - a.startedAt) / 1000);
+            const due = s.state.schedules.filter(
+              (x) => x.status === "pending" && x.at <= to,
+            );
+            if (!due.length) continue;
+            const player = due.some(
+              (x) =>
+                x.entityId === "player" ||
+                x.operations.some(
+                  (o) => o.entityId === "player" || o.from === "player",
+                ),
+            );
+            if (player) {
+              a.enabled = false;
+              a.lastError = {
+                code: "PLAYER_DECISION_REQUIRED",
+                message: "日程涉及玩家选择，自动推进已暂停。",
+              };
+              continue;
+            }
+            const result = store.advance({
+              worldId: a.worldId,
+              branchId: a.branchId,
+              to,
+              maxEvents: a.remainingEvents,
+            });
+            a.remainingEvents -=
+              result.executed.length + result.cancelled.length;
+            await drain(a.worldId, a.branchId);
+          } catch (e) {
+            a.enabled = false;
+            a.lastError = safeError(e);
+          }
         }
-      }
+      })();
+      jobs.add(tick);
+      tick.then(
+        () => jobs.delete(tick),
+        () => jobs.delete(tick),
+      );
     }, 1000);
     timer.unref();
     return {
@@ -1073,24 +1088,61 @@ export async function startServer({
       projection,
       dataDir,
       url: `http://127.0.0.1:${server.address().port}`,
-      async close() {
-        if (stopped) return;
-        stopped = true;
-        clearInterval(timer);
-        for (const r of live.values()) r.controller.abort();
-        await imports.close();
-        await Promise.allSettled([...jobs]);
-        await new Promise((r) => server.close(r));
-        await projection.close();
-        store.close();
-        await rm(lock, { recursive: true, force: true });
+      close() {
+        closeWork ??= (async () => {
+          stopped = true;
+          clearInterval(timer);
+          const errors = [],
+            warnings = [];
+          const attempt = async (action) => {
+            try {
+              return await action();
+            } catch (e) {
+              errors.push(e);
+            }
+          };
+          const listenerClosed = new Promise((resolve, reject) =>
+            server.close((e) => (e ? reject(e) : resolve())),
+          );
+          listenerClosed.catch(() => {});
+          for (const r of live.values()) r.controller.abort();
+          try {
+            const result = await attempt(() => imports.close());
+            warnings.push(...(result?.warnings || []));
+            await attempt(() => listenerClosed);
+            // Requests already accepted before listener closure may have launched work.
+            while (jobs.size) {
+              for (const r of live.values()) r.controller.abort();
+              await Promise.allSettled([...jobs]);
+            }
+          } finally {
+            await attempt(() => projection.close());
+            await attempt(() => store.close());
+            await attempt(() => rm(lock, { recursive: true, force: true }));
+          }
+          if (errors.length)
+            throw Object.assign(
+              new AggregateError(errors, "服务关闭时部分资源释放失败"),
+              { code: "SHUTDOWN_FAILED" },
+            );
+          return { warnings };
+        })();
+        return closeWork;
       },
     };
   } catch (e) {
-    await imports?.close();
-    await projection?.close();
-    store?.close();
-    await rm(lock, { recursive: true, force: true });
+    for (const dispose of [
+      () => imports?.close(),
+      () => projection?.close(),
+      () => store?.close(),
+      () => rm(lock, { recursive: true, force: true }),
+    ]) {
+      try {
+        await dispose();
+      } catch {
+        /* Retain the startup failure after attempting every disposer. */
+      }
+    }
     throw e;
   }
 }

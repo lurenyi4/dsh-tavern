@@ -26,6 +26,7 @@ export class ImportJobs {
     this.root = join(dataDir, ".import-jobs");
     this.jobs = new Map();
     this.closed = false;
+    this.active = new Set();
   }
   static async open(dir) {
     const self = new ImportJobs(dir);
@@ -75,6 +76,42 @@ export class ImportJobs {
       await self.save(j);
     }
     return self;
+  }
+  track(work, j) {
+    this.active.add(work);
+    if (j) {
+      j.operations ??= new Set();
+      j.operations.add(work);
+    }
+    const done = () => {
+      this.active.delete(work);
+      j?.operations?.delete(work);
+    };
+    work.then(done, done);
+    return work;
+  }
+  admit(action, j) {
+    if (this.closed)
+      return Promise.reject(failure("IMPORT_CLOSED", "服务正在关闭"));
+    if (j?.evicting)
+      return Promise.reject(failure("IMPORT_RETIRED", "该历史记录正在回收"));
+    try {
+      return this.track(Promise.resolve(action()), j);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  async persist(j) {
+    try {
+      await this.save(j);
+      return true;
+    } catch (e) {
+      j.persistenceWarning = {
+        code: e.code || "IMPORT_STORAGE",
+        message: "记录曾保存失败；关闭或重启时会重新协调。",
+      };
+      return false;
+    }
   }
   async cleanup(j) {
     try {
@@ -184,7 +221,10 @@ export class ImportJobs {
       return summary;
     });
   }
-  async create({ filename, size }) {
+  create(input) {
+    return this.admit(() => this.createJob(input));
+  }
+  async createJob({ filename, size }) {
     if (this.closed) throw failure("IMPORT_CLOSED", "服务正在关闭");
     if ([...this.jobs.values()].some((j) => !terminal.has(j.status)))
       throw failure("IMPORT_BUSY", "请先完成或取消当前导入");
@@ -211,35 +251,48 @@ export class ImportJobs {
       controller: new AbortController(),
     };
     this.jobs.set(j.id, j);
-    for (const previous of this.jobs.values())
-      if (previous !== j && terminal.has(previous.status))
-        delete previous.result;
-    for (const old of [...this.jobs.values()]
-      .filter((j) => terminal.has(j.status))
-      .slice(0, Math.max(0, this.jobs.size - 49))) {
-      await this.awaitFinalization(old, true);
-      if (!(await this.cleanup(old))) {
-        await this.save(old);
-        continue;
+    try {
+      for (const previous of this.jobs.values())
+        if (previous !== j && terminal.has(previous.status))
+          delete previous.result;
+      for (const old of [...this.jobs.values()]
+        .filter((j) => terminal.has(j.status))
+        .slice(0, Math.max(0, this.jobs.size - 49))) {
+        old.evicting = true;
+        try {
+          await Promise.allSettled([...(old.operations || [])]);
+          await this.awaitFinalization(old, true);
+          if (!(await this.cleanup(old))) {
+            await this.save(old);
+            continue;
+          }
+          await rm(join(this.root, old.id + ".json"), { force: true });
+          this.jobs.delete(old.id);
+        } finally {
+          old.evicting = false;
+        }
       }
-      await rm(join(this.root, old.id + ".json"), { force: true });
-      this.jobs.delete(old.id);
+      if (this.jobs.size > 50) {
+        this.jobs.delete(j.id);
+        throw failure(
+          "IMPORT_CLEANUP_PENDING",
+          "导入临时文件尚未清理，请重试取消或重启后再导入。",
+        );
+      }
+      await this.save(j);
+      return this.get(j.id);
+    } catch (e) {
+      if (this.jobs.has(j.id)) await this.failJob(j, e);
+      throw e;
     }
-    if (this.jobs.size > 50) {
-      this.jobs.delete(j.id);
-      throw failure(
-        "IMPORT_CLEANUP_PENDING",
-        "导入临时文件尚未清理，请重试取消或重启后再导入。",
-      );
-    }
-    await this.save(j);
-    return this.get(j.id);
   }
   upload(id, stream) {
+    if (this.closed)
+      return Promise.reject(failure("IMPORT_CLOSED", "服务正在关闭"));
     const j = this.jobs.get(id);
     if (!j || j.status !== "created")
       return Promise.reject(failure("IMPORT_NOT_READY", "任务不能上传"));
-    j.uploadWork = this.receive(id, stream);
+    j.uploadWork = this.admit(() => this.receive(id, stream), j);
     return j.uploadWork;
   }
   async receive(id, stream) {
@@ -267,65 +320,75 @@ export class ImportJobs {
       j.controller.signal.throwIfAborted();
       j.status = "preparing";
       await this.save(j);
+      j.controller.signal.throwIfAborted();
       const worker = new Worker(
         new URL("./import-worker.mjs", import.meta.url),
         { workerData: { path, filename: j.filename } },
       );
       j.worker = worker;
-      j.work = new Promise((resolve) => {
-        let finished = false;
-        const timeout = setTimeout(() => {
-          finish({
-            error: {
-              code: "IMPORT_TIMEOUT",
-              message: "解析超过30秒上限，请缩小内容包",
-            },
-          });
-          worker.terminate();
-        }, 30000);
-        timeout.unref();
-        const finish = async (message) => {
-          if (finished) return;
-          finished = true;
-          clearTimeout(timeout);
-          j.worker = null;
-          try {
-            if (j.status !== "cancelled" && j.status !== "interrupted") {
-              if (message.prepared) {
-                await checkImportBudget(this.dataDir, message.prepared, j.size);
-                if (j.controller.signal.aborted || this.closed) return;
-                j.prepared = message.prepared;
-                j.status = "ready";
-              } else {
-                await this.failJob(j, message.error);
-                return;
-              }
-              await this.save(j);
-            }
-          } catch (e) {
-            await this.failJob(j, e);
-          } finally {
-            resolve();
-          }
-        };
-        worker.once("message", finish);
-        worker.once("error", (e) =>
-          finish({ error: { code: "IMPORT_FAILED", message: e.message } }),
-        );
-        worker.once("exit", (code) => {
-          if (!finished)
+      j.work = this.track(
+        new Promise((resolve) => {
+          let finished = false;
+          const timeout = setTimeout(() => {
             finish({
-              error: { code: "IMPORT_INTERRUPTED", message: "解析已停止" },
+              error: {
+                code: "IMPORT_TIMEOUT",
+                message: "解析超过30秒上限，请缩小内容包",
+              },
             });
-        });
-      });
+            worker.terminate();
+          }, 30000);
+          timeout.unref();
+          const finish = async (message) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeout);
+            j.worker = null;
+            try {
+              if (j.status !== "cancelled" && j.status !== "interrupted") {
+                if (message.prepared) {
+                  await checkImportBudget(
+                    this.dataDir,
+                    message.prepared,
+                    j.size,
+                  );
+                  if (j.controller.signal.aborted || this.closed) return;
+                  j.prepared = message.prepared;
+                  j.status = "ready";
+                } else {
+                  await this.failJob(j, message.error);
+                  return;
+                }
+                await this.save(j);
+              }
+            } catch (e) {
+              await this.failJob(j, e);
+            } finally {
+              resolve();
+            }
+          };
+          worker.once("message", finish);
+          worker.once("error", (e) =>
+            finish({ error: { code: "IMPORT_FAILED", message: e.message } }),
+          );
+          worker.once("exit", (code) => {
+            if (!finished)
+              finish({
+                error: { code: "IMPORT_INTERRUPTED", message: "解析已停止" },
+              });
+          });
+        }),
+      );
       return this.get(id);
     } catch (e) {
       await this.failJob(j, e, file);
       throw e;
     }
   }
-  async accept(id) {
+  accept(id) {
+    return this.admit(() => this.acceptJob(id), this.jobs.get(id));
+  }
+  async acceptJob(id) {
     const j = this.jobs.get(id);
     if (j?.status === "completed") {
       j.result ??= await readCard(this.dataDir, j.cardId);
@@ -357,7 +420,7 @@ export class ImportJobs {
       } finally {
         delete j.prepared;
         await this.cleanup(j);
-        await this.save(j);
+        await this.persist(j);
       }
     })();
     await j.work;
@@ -368,8 +431,10 @@ export class ImportJobs {
     if (!j) return Promise.reject(failure("IMPORT_NOT_FOUND", "任务不存在"));
     if (this.closed)
       return Promise.reject(failure("IMPORT_CLOSED", "服务正在关闭"));
+    if (j.evicting)
+      return Promise.reject(failure("IMPORT_RETIRED", "该历史记录正在回收"));
     if (j.cancelWork) return j.cancelWork;
-    const work = this.cancelJob(id);
+    const work = this.admit(() => this.cancelJob(id), j);
     j.cancelWork = work;
     return work.finally(() => {
       if (j.cancelWork === work) delete j.cancelWork;
@@ -404,31 +469,31 @@ export class ImportJobs {
     return this.closeWork;
   }
   async closeJobs() {
-    if (this.closed) return;
     this.closed = true;
+    // Stop producers first, then join every admitted public operation and worker.
     for (const j of this.jobs.values()) {
-      if (terminal.has(j.status)) {
-        await this.awaitFinalization(j, true);
-        const prior = j.cleanupWarning;
-        await this.cleanup(j);
-        if (prior || j.cleanupWarning || j.persistenceWarning)
-          await this.save(j);
-        continue;
-      }
-      if (j.status === "registering") {
-        j.controller.abort();
-        await j.work;
-      } else {
-        j.status = "interrupted";
+      if (!terminal.has(j.status)) {
+        if (j.status !== "registering") j.status = "interrupted";
         j.controller.abort();
         j.stream?.destroy();
-        await j.uploadWork?.catch(() => {});
-        await j.worker?.terminate();
-        await j.work;
-        delete j.prepared;
-        await this.cleanup(j);
-        await this.save(j);
+        if (j.worker) this.track(j.worker.terminate());
       }
     }
+    while (this.active.size) await Promise.allSettled([...this.active]);
+    const warnings = [];
+    for (const j of this.jobs.values()) {
+      await this.awaitFinalization(j);
+      delete j.prepared;
+      if (!terminal.has(j.status)) j.status = "interrupted";
+      await this.cleanup(j);
+      const persisted = await this.persist(j);
+      if (!persisted || j.cleanupWarning)
+        warnings.push({
+          id: j.id,
+          persistenceWarning: j.persistenceWarning,
+          cleanupWarning: j.cleanupWarning,
+        });
+    }
+    return { warnings };
   }
 }

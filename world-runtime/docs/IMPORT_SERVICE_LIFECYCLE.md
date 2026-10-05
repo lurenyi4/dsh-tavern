@@ -1,0 +1,21 @@
+# Import and service lifecycle boundary
+
+The1265570 full review found that terminal promise joining was not an admission/ownership boundary. A create/history producer could write after close, a newly admitted cancellation could race journal eviction, and active registration's final journal rejection could prevent the service listener and lock from closing. The original review/probes are preserved in service-lifecycle-full-review; the scoped PASS is preserved separately in service-lifecycle-focused-review.
+
+## Invariants
+
+1. create/upload/accept/cancel all enter through one admission check. Closing refuses every new mutation. Each accepted operation belongs to the manager's active set until its promise settles. Worker completion is a producer in the same set, including a worker spawned by an already accepted upload. Receive rechecks cancellation after saving preparing, before spawning a worker.
+2. Close sets the admission barrier first, aborts streams/controllers and terminates active workers. It drains the active set to empty before final journal/temporary-file cleanup. A visible terminal status never substitutes for operation completion. Close itself is outside the active set, so it cannot await itself.
+3. Cancellation can interrupt acceptance/upload and join their producer promises, but never joins its own public-operation promise. History holds an eviction reservation before yielding, joins already admitted operations for that old job, and refuses newly arriving cancel/accept. The reservation is released on failure, leaving cleanup ownership retryable. A failed create is finalized instead of leaving an invisible permanent busy slot.
+4. A successful card rename remains completed, even if the final job journal save fails. Persistence is a separate diagnostic. Acceptance exposes that warning; close retries persistence after all producers settle. If storage still fails, close returns structured unresolved warnings after ending filesystem activity. Repeated close returns the same settled result; it does not resume writes after another owner can acquire the data directory. Reopening under the exclusive server lock is the next retry/reconciliation boundary.
+5. app.close also coalesces calls. It stops listener admission, aborts live story runs, drains imports and previously accepted HTTP work, and joins background work before disposing projection/store and releasing the lock. Every disposer is attempted in finally; unexpected disposal failures are aggregated and repeated close remains the same truthful rejection. Import persistence warnings do not strand a listening server. The autonomy timer is stopped and its already-running ticks are included in the existing job set.
+
+This is a small active-operation set plus per-job eviction ownership, not a new storage service, serialized global task engine or second canonical state. Existing card/import/backup limits and the accepted importer.finally double-fault minor are unchanged.
+
+## Evidence
+
+Four deterministic tests failed on1265570 before repair: actual HTTP successful publication followed by one-shot completed-journal EIO, history create gated while close ran, new cancellation during reserved history cleanup, and pre-publication close with one-shot cancelled-journal EIO. Each now passes.
+
+The final suite additionally checks persistent completed-journal failures: acceptance stays completed with a warning, the listener actually stops, the server lock is removed, repeated close returns the same warning result, and fault removal plus fresh server startup reconciles the published card. An unexpected projection-disposal failure still attempts store/listener/lock disposal, returns SHUTDOWN_FAILED instead of false success, and permits a fresh server after cleanup. Closing-period create/upload/accept/cancel are rejected, while already accepted producers are joined with zero observed post-close journal writes. Older delayed-save/worker/error-ownership and HTTP/DOM regressions remain part of the full run.
+
+No real hardware power-loss guarantee is inferred from filesystem fault injection. This candidate remains local pending two new independent reviews. The remote media branch remains e327359 with its previously recorded failed CI; main remains58562fac. Android/native/device, real-browser and licensed-ecosystem/model-quality gates remain open.

@@ -1,0 +1,12 @@
+✔ terminal close awaits the worker journal already in progress (140.879326ms)
+✔ terminal cancel awaits the worker journal already in progress (116.953284ms)
+✔ terminal history awaits the worker journal already in progress (156.66874ms)
+✔ close also waits for an already-running cancellation journal without self-await (55.602665ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 568.341749

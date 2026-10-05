@@ -1,0 +1,82 @@
+✖ real HTTP published accept journal EIO cannot strand listener or data lock (206.023492ms)
+✖ accepted history create belongs to close boundary; closing rejects every new mutation (83.021135ms)
+✖ eviction reserves its journal against a newly arriving cancel (36.604262ms)
+✖ pre-publication close retries a one-shot cancelled journal failure (68.562487ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 499.272205
+
+✖ failing tests:
+
+test at world-runtime/test/import-service-lifecycle.test.mjs:6:1
+✖ real HTTP published accept journal EIO cannot strand listener or data lock (206.023492ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'rejected'
+  - 'fulfilled'
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/import-service-lifecycle.test.mjs:10:211)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'rejected',
+    expected: 'fulfilled',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at world-runtime/test/import-service-lifecycle.test.mjs:14:1
+✖ accepted history create belongs to close boundary; closing rejects every new mutation (83.021135ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  true !== false
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/import-service-lifecycle.test.mjs:16:536)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at world-runtime/test/import-service-lifecycle.test.mjs:19:1
+✖ eviction reserves its journal against a newly arriving cancel (36.604262ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/import-service-lifecycle.test.mjs:21:379)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'IMPORT_RETIRED' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at world-runtime/test/import-service-lifecycle.test.mjs:24:1
+✖ pre-publication close retries a one-shot cancelled journal failure (68.562487ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+    assert.ok(results.every(r=>r.status==='fulfilled'))
+
+      at TestContext.<anonymous> (file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/import-service-lifecycle.test.mjs:26:492)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,5 @@
+ACTIVE_REGISTERING_JOURNAL_FAILURE [ [ 'rejected', 'EIO' ], [ 'rejected', 'EIO' ] ] memory cancelled disk registering
+RETRY_SAME_REJECTED_PROMISE true rejected
+CLOSE_RESOLVED_WITH_CREATE_PENDING true
+JOURNAL_WRITES_AFTER_CLOSE 1 created status interrupted
+HISTORY_CANCEL_RACE rejected IMPORT_NOT_FOUND inMap false journalRecreated true

@@ -47,3 +47,7 @@ Publish this reviewed slice only on feat/local-media-imports; main remains the p
 ## Branch CI follow-up
 
 The approved9bc7960 product plus documentation was published as e327359 to feat/local-media-imports; main was unchanged. Its exact-SHA remote core CI failed on an asynchronous shutdown race despite prior local/independent passes. The local follow-up fixes in-flight finalization waiting and requires fresh reviews. Therefore the earlier independent PASS remains evidence for9bc7960 only; it is not a claim that e327359 CI was green or that this follow-up is approved.
+
+## Service-lifecycle review follow-up
+
+The1265570 full review found two shutdown/admission majors despite its focused PASS. Both and a history cancellation minor were reproduced and repaired using one active-operation admission boundary plus unconditional service disposal attempts. See IMPORT_SERVICE_LIFECYCLE.md and preserved service-lifecycle review reports. The new candidate is not yet independently approved or remotely validated; e327359 remains the published media branch tip with failed CI.
