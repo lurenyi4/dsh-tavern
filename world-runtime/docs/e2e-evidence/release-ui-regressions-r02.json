@@ -1,0 +1,22 @@
+{
+  "kind": "jsdom + real HTTP/SSE/SQLite/DSH; not Chromium",
+  "at": "2026-10-05T11:42:39.373Z",
+  "observations": [
+    {
+      "stage": "resumed",
+      "sameWorld": true,
+      "sameBranch": true,
+      "sendDisabled": true,
+      "continuedDraft": true,
+      "turnPostsFromReload": 0
+    },
+    {
+      "stage": "cancelled",
+      "runCount": 1,
+      "attemptCount": 1,
+      "committedScenes": 0,
+      "stateUnchanged": true
+    }
+  ],
+  "errors": []
+}

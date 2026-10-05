@@ -1,0 +1,44 @@
+# 运行环境
+node_modules
+node_modules/
+.playwright-cli/
+cordis.yml
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.*.example
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# 本地临时输出（截图、手动验证产物等）
+output/
+
+# 本地代码分析资料、快照和缓存
+.ua/
+
+# 用户数据（人物卡、聊天、剧本、素材、索引、设置、diff）
+data/
+
+# 按需重新取得的本地参考副本；来源见 docs/research/reference-projects.md
+/references/
+
+# 私人请求快照，仅供本地诊断
+docs/research/sillytavern-successful-prompt-snapshot-*.json
+
+# Local installation context (host and isolated home)
+.dsh-tavern-local.json
+
+# Story Runtime Linux private runtime and user data
+world-runtime/.runtime/
+.story-runtime-data/
+world-runtime/.local-data/
+
+# User-provided planning inputs and obsolete archive packaging metadata stay local
+world-runtime/docs/reference-plan/
+DELIVERY_MANIFEST.json
+# Browser traces can include private application text; only synthetic reviewed evidence is released
+world-runtime/docs/e2e-evidence/*trace*.zip

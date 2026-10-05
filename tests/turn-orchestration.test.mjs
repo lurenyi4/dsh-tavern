@@ -1,0 +1,399 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import { createCardPreparation } from '../tavern-plugin/lib/domain/card-preparation.js'
+import { createScriptContinuity } from '../tavern-plugin/lib/domain/script-continuity.js'
+import { createStoryTimeline } from '../tavern-plugin/lib/domain/story-timeline.js'
+import { renderTavernMacros } from '../tavern-plugin/lib/domain/tavern-macro-engine.js'
+import { projectReplyPresentation } from '../tavern-plugin/lib/domain/reply-presentation.js'
+import { createTurnOrchestrator } from '../tavern-plugin/lib/domain/turn-orchestration.js'
+import { createForegroundFrameBuilder, foregroundFrameText } from '../tavern-plugin/lib/domain/agent-input-frame.js'
+import { createContextPlanner } from '../tavern-plugin/lib/domain/context-planner.js'
+import { createForegroundFrameSessionAdapter } from '../tavern-plugin/lib/domain/foreground-frame-session-adapter.js'
+
+function clone(value) {
+  return value === undefined ? undefined : structuredClone(value)
+}
+
+function script() {
+  return {
+    title: '银铃', importedAt: 1,
+    chunks: [
+      { id: 'chunk-1', order: 0, text: '两人在雨夜抵达旅店。' },
+      { id: 'chunk-2', order: 1, text: '钟楼传来第三声铃响。' }
+    ]
+  }
+}
+
+function harness(mode, options = {}) {
+  const cards = createCardPreparation({ id: () => 'card-1', now: () => 1000 })
+  const scripts = createScriptContinuity()
+  let cardWorkspace = cards.create({ kind: 'import', payload: options.cardData || { name: '阿芙拉', description: '旧描述' } })
+  let card = cards.project(cardWorkspace)
+  let chat = {
+    id: 'chat-1', cardPath: options.draft ? '' : 'cards/阿芙拉.json', cardName: options.draft ? '卡片工作台' : card.name, mode,
+    messages: [], posture: '站在窗边', guides: [], nativeCommits: {},
+    ledger: options.ledger || null,
+    preparedWorldBookContext: options.preparedWorldBookContext || '',
+    webSearchEnabled: options.webSearchEnabled === true,
+    runtimePresetSnapshot: clone(options.runtimePresetSnapshot || null),
+    macroState: { userName: 'User', local: {}, global: {} },
+    scriptState: mode === 'script' ? scripts.start(script(), 0) : null,
+    workspace: mode === 'card' ? { mountedResources: [], sourceIds: options.draft ? ['src-1'] : [], draft: { name: '' }, player: '', cursor: 0, prepared: null } : null,
+    _storageRevision: 1
+  }
+  const history = new Map([[1, clone(chat)]])
+  const settlements = []
+  const createdCards = []
+  const plannerCalls = []
+  const timeline = createStoryTimeline({ id: (prefix) => prefix + '-' + Math.random().toString(36).slice(2), now: () => 2000 })
+  const store = {
+    async chatForSession() { return clone(chat) },
+    async readCard() { if (options.brokenCard) throw new SyntaxError('invalid JSON'); return options.draft && !chat.cardPath ? undefined : clone(card) },
+    async readCardExtensions() { return clone(options.extensions || { regexScripts: [] }) },
+    async readScript() { return mode === 'script' || (mode === 'card' && !options.draft) ? clone(script()) : undefined },
+    async readBoundWorldBook() { return clone(options.boundWorldBook || null) },
+    async writeChat(value, metadata) {
+      const revision = Math.max(0, Number(chat._storageRevision) || 0) + 1
+      let next = clone(value)
+      if (metadata && metadata.source === 'foreground.commit' && options.autoSettle !== false) {
+        const settlement = timeline.apply({ chat: next, intent: { kind: 'agent.begin', role: 'settlement' } })
+        next = timeline.complete({
+          chat: settlement.chat,
+          operationId: settlement.value.operationId,
+          basedOn: settlement.value.basedOn,
+          outcome: { status: 'success' }
+        }).chat
+      }
+      chat = next
+      chat._storageRevision = revision
+      value._storageRevision = revision
+      history.set(revision, clone(chat))
+    },
+    async updateChat(_id, mutation, metadata) {
+      const next = await mutation(clone(chat))
+      if (next !== undefined) await store.writeChat(next, metadata)
+      return clone(chat)
+    },
+    async updateCard(_cardId, fields, revision, rawOperations) {
+      const change = cards.update({ kind: 'card', card: cardWorkspace, patch: fields, revision, rawOperations })
+      cardWorkspace = clone(change.card)
+      card = clone(change.view)
+      return { ...clone(change), card: clone(card) }
+    },
+    async createCard(_chat, state) {
+      cardWorkspace = cards.create({ kind: 'draft', draft: state.draft, player: state.player, sourcePaths: state.sourceIds || state.sourcePaths || [] })
+      card = cards.project(cardWorkspace)
+      const path = 'cards/' + card.name + '.json'
+      card.path = path
+      createdCards.push({ path, card: clone(card) })
+      return { path, card: clone(card) }
+    }
+  }
+  const orchestrator = createTurnOrchestrator({
+    store,
+    planner: {
+      async plan(input) {
+        plannerCalls.push(clone(input))
+        if (options.planner) return options.planner.plan(input)
+        return {
+          text: 'context:' + input.purpose,
+          sections: input.purpose === 'body' && Array.isArray(options.plannerSections) ? clone(options.plannerSections) : undefined
+        }
+      }
+    },
+    worldBookRecall: options.worldBookRecall,
+    captureSceneWorldbook: options.captureSceneWorldbook,
+    scripts,
+    timeline,
+    frameBuilder: createForegroundFrameBuilder(),
+    cards,
+    workspace: {
+      async prepare(value, turn) {
+        value.workspace.prepared = { nativeTurn: turn, cursorBefore: value.workspace.cursor, total: 1, window: [{ title: '素材', text: '拔剑。' }] }
+        return value.workspace.prepared
+      },
+      commit(value, turn) {
+        if (value.workspace.prepared && value.workspace.prepared.nativeTurn === turn) {
+          value.workspace.cursor = 1
+          value.workspace.prepared = null
+        }
+      }
+    },
+    queueSettlement: (chatId) => settlements.push(chatId),
+    renderMacros: options.macros === true ? function (text, value) {
+      const result = renderTavernMacros(text, {
+        charName: value.cardName,
+        userName: value.macroState.userName,
+        localVariables: value.macroState.local,
+        globalVariables: value.macroState.global
+      })
+      value.macroState.local = result.localVariables
+      value.macroState.global = result.globalVariables
+      return result.text
+    } : undefined,
+    resolvePresetRegexScripts: options.resolvePresetRegexScripts,
+    projectUserTemplate: options.projectUserTemplate,
+    projectReply: projectReplyPresentation,
+    projectWorldBookTemplates: options.projectWorldBookTemplates,
+    projectForegroundWorldbook: options.projectForegroundWorldbook,
+    recordWorldbookRecall: options.recordWorldbookRecall,
+    projectScriptPromptWorldbook: options.projectScriptPromptWorldbook,
+    shellToolName: options.shellToolName,
+    now: () => 2000
+  })
+  return {
+    orchestrator,
+    chat: () => clone(chat),
+    card: () => clone(card),
+    cardWorkspace: () => clone(cardWorkspace),
+    plannerCalls,
+    settlements,
+    createdCards,
+    timeline,
+    rollback(value = chat) {
+      const target = timeline.rollbackTarget({ chat: value })
+      const beforeChat = target === null ? undefined : history.get(target.beforeRevision)
+      const result = timeline.apply({ chat: clone(value), intent: { kind: 'turn.rollback', beforeChat: clone(beforeChat) } })
+      result.chat._storageRevision = Math.max(0, Number(value._storageRevision) || 0) + 1
+      return result
+    },
+    replaceChat(next) { chat = clone(next) }
+  }
+}
+
+test('生图世界书版本冻结在生成前，不进入正文 Frame 文本，提交时不借用后来版本', async () => {
+  for (const compatibility of [false, true]) {
+    let calls = 0, current = { version: 1, digest: 'a'.repeat(64) }
+    const run = harness('story', { captureSceneWorldbook: async () => { calls++; return clone(current) } })
+    const input = { sessionId: 'session-1', turn: 1, userText: '看一眼林岚。' }
+    const first = compatibility ? await run.orchestrator.beginCompatibility(input) : await run.orchestrator.prepare(input)
+    if (!compatibility) assert.doesNotMatch(foregroundFrameText(first.frame), /aaaaa|sceneWorldbook/)
+    current = { version: 1, digest: 'b'.repeat(64) }
+    if (compatibility) await run.orchestrator.beginCompatibility(input)
+    else await run.orchestrator.prepare(input)
+    assert.equal(calls, 1)
+    await run.orchestrator.finalize({ ...input, assistantText: '林岚站在车站。' })
+    const message = run.chat().messages.at(-1)
+    assert.equal(message.sceneWorldbook.digest, 'a'.repeat(64))
+    assert.equal(message.sceneWorldbook.bodyDigests.length, 1)
+    const next = { ...input, turn: 2, userText: '继续' }
+    if (compatibility) await run.orchestrator.beginCompatibility(next)
+    else await run.orchestrator.prepare(next)
+    await run.orchestrator.finalize({ ...next, assistantText: '第二轮的正文。' })
+    assert.equal(run.chat().messages.at(-1).sceneWorldbook.digest, 'b'.repeat(64))
+    assert.equal(run.chat().messages.find(item => item.role === 'assistant').sceneWorldbook.digest, 'a'.repeat(64))
+    assert.equal(run.rollback().chat.messages.at(-1).sceneWorldbook.digest, 'a'.repeat(64))
+  }
+})
+
+test('连续正文回合的实际 Frame 消息不重复基本信息和常驻世界书', async () => {
+  const planner = createContextPlanner({ prompt: () => '正文写作规则' })
+  const cardData = { name: '阿芙拉', description: '固定描述', personality: '固定性格', scenario: '固定场景', mes_example: '固定示例', system_prompt: '逐轮系统指令', post_history_instructions: '逐轮历史后指令' }
+  for (const mode of ['story', 'script']) {
+    const run = harness(mode, { planner, cardData, preparedWorldBookContext: '本轮动态世界书' })
+    const prefix = await planner.plan({ purpose: 'play-card-snapshot', card: run.card(), chat: run.chat(), worldBookContext: '固定世界设定', worldBookLabel: '常驻世界书' })
+    const adapter = createForegroundFrameSessionAdapter()
+    let messages = []
+    for (const turn of [2, 3]) {
+      const input = { sessionId: 'session-1', turn, userText: '继续' }
+      const prepared = await run.orchestrator.prepare(input)
+      const text = foregroundFrameText(prepared.frame)
+      assert.equal(prepared.frame.context.cardContext, '')
+      assert.doesNotMatch(text, /逐轮系统指令/)
+      assert.match(text, /逐轮历史后指令/)
+      assert.match(text, /本轮动态世界书/)
+      // The production Session already owns the opening system snapshot.
+      const session = { events: [{ type: 'user/message', data: { id: 'tavern-session-prefix:test', role: 'user', content: [],
+        source: { kind: 'plugin', plugin: 'dsh-tavern', form: 'snapshot', sections: [{ name: 'tavern:session-context', text: prefix.text }] } } }] }
+      messages = adapter.append({ session, messages, frame: prepared.frame, step: 1 }).messages
+      await run.orchestrator.finalize({ ...input, assistantText: '雨水敲着窗。' })
+    }
+    const historyText = messages.map(message => message.content[0].text).join('\n')
+    const requestText = prefix.text + '\n' + historyText
+    for (const fixed of ['固定描述', '固定性格', '固定场景', '固定示例', '固定世界设定']) {
+      assert.equal(requestText.split(fixed).length - 1, 1)
+      assert.ok(!historyText.includes(fixed))
+    }
+    assert.equal(requestText.split('逐轮系统指令').length - 1, 1)
+    assert.doesNotMatch(historyText, /逐轮系统指令/)
+    assert.equal(historyText.split('逐轮历史后指令').length - 1, 2)
+  }
+})
+
+test('同一 DSH rpcId 即使被重放到新回合也不会再次推进酒馆状态', async () => {
+  const run = harness('story')
+  await run.orchestrator.prepare({ sessionId: 'session-1', turn: 2, requestId: 'rpc-1', userText: '推开窗' })
+  await run.orchestrator.finalize({ sessionId: 'session-1', turn: 2, requestId: 'rpc-1', userText: '推开窗', assistantText: '雨水扑进房间。' })
+
+  const duplicate = await run.orchestrator.prepare({ sessionId: 'session-1', turn: 3, requestId: 'rpc-1', userText: '推开窗' })
+
+  assert.equal(duplicate.duplicate, true)
+  assert.equal(duplicate.committedTurn, 2)
+  assert.equal(run.chat().messages.length, 2)
+  assert.equal(Object.values(run.timeline.inspect({ chat: run.chat() }).operations).some(function (item) {
+    return Number(item.turn) === 3
+  }), false)
+})
+
+test('人物卡 promptOnly 正则写入 Session，但展示投影仍保留原始状态块', async () => {
+  const run = harness('story', {
+    extensions: {
+      regexScripts: [{
+        id: 'draft', name: '移除草稿', findRegex: '/<draft_notes>[\\s\\S]*?<\\/draft_notes>\\s*/', replaceString: '',
+        placement: [2], enabled: true, markdownOnly: false, promptOnly: true, runOnEdit: false
+      }]
+    }
+  })
+  await run.orchestrator.prepare({ sessionId: 'session-1', turn: 2, userText: '继续' })
+  const saved = await run.orchestrator.finalize({
+    sessionId: 'session-1', turn: 2, userText: '继续',
+    assistantText: '<draft_notes>内部推演</draft_notes>\n正文。'
+  })
+
+  assert.equal(saved.reply.sourceText, '<draft_notes>内部推演</draft_notes>\n正文。')
+  assert.equal(saved.reply.sessionText, '正文。')
+  assert.equal(saved.reply.displayText, '<draft_notes>内部推演</draft_notes>\n正文。')
+  assert.equal(run.chat().messages.at(-1).text, '正文。')
+  assert.equal(run.chat().messages.at(-1).displayText, '<draft_notes>内部推演</draft_notes>\n正文。')
+})
+
+test('预设中段渲染后进入真实 Frame，并保留存档中的原始宏', async () => {
+  const raw = {
+    front: { entries: [{ role: 'system', content: '{{setvar::style::温和}}' }] },
+    middle: { entries: [{ role: 'system', content: '采用{{getvar::style}}笔调。' }] }
+  }
+  const run = harness('story', { runtimePresetSnapshot: structuredClone(raw) })
+  const prepared = await run.orchestrator.prepare({ sessionId: 'session-1', turn: 2, userText: '继续' })
+  assert.match(prepared.frame.context.writingRules, /采用温和笔调。/)
+  assert.deepEqual(run.chat().runtimePresetSnapshot, raw)
+})
+
+test('正文替代先回到 checkpoint 再提交，剧本游标不会推进两次', async () => {
+  const run = harness('script')
+  await run.orchestrator.prepare({ sessionId: 'session-1', turn: 1, userText: '走进旅店' })
+  await run.orchestrator.finalize({ sessionId: 'session-1', turn: 1, userText: '走进旅店', assistantText: '第一版正文' })
+  assert.equal(run.chat().scriptState.cursor, 1)
+
+  const rolled = run.rollback()
+  run.replaceChat(rolled.chat)
+  await run.orchestrator.prepare({ sessionId: 'session-1', turn: 2, userText: '【重新生成】走进旅店' })
+  await run.orchestrator.finalize({ sessionId: 'session-1', turn: 2, userText: '【重新生成】走进旅店', assistantText: '替代正文' })
+
+  assert.equal(run.chat().scriptState.cursor, 1)
+  assert.equal(run.chat().timeline.checkpoints.length, 1)
+  assert.equal(run.chat().messages.at(-1).text, '替代正文')
+})
+
+test('卡片 raw 扩展修改先暂存，最终回复后才写入工作 raw', async () => {
+  const run = harness('card')
+  await run.orchestrator.stageChanges({
+    sessionId: 'session-1', turn: 9,
+    rawOperations: [{ op: 'set', path: '/extensions/regex_scripts', value: [{ scriptName: '状态栏' }] }]
+  })
+  assert.equal(run.cardWorkspace().raw.extensions, undefined)
+
+  await run.orchestrator.finalize({ sessionId: 'session-1', turn: 9, userText: '加入正则', assistantText: '已经加入。' })
+  assert.deepEqual(run.cardWorkspace().raw.extensions.regex_scripts, [{ scriptName: '状态栏' }])
+})
+
+test('空白卡片工作台确认完整设定后直接创建并绑定正式人物卡', async () => {
+  const run = harness('card', { draft: true })
+  await run.orchestrator.prepare({ sessionId: 'session-1', turn: 6, userText: '确认角色和玩家' })
+  await run.orchestrator.stageChanges({ sessionId: 'session-1', turn: 6, fields: { name: '阿芙拉', player: '旅行者' } })
+  assert.equal(run.chat().workspace.draft.name, '')
+
+  const saved = await run.orchestrator.finalize({ sessionId: 'session-1', turn: 6, userText: '确认角色和玩家', assistantText: '人物卡已创建。' })
+  assert.equal(run.chat().workspace.draft.name, '阿芙拉')
+  assert.equal(run.chat().workspace.player, '旅行者')
+  assert.equal(run.chat().workspace.cursor, 1)
+  assert.equal(run.chat().cardPath, 'cards/阿芙拉.json')
+  assert.equal(run.chat().cardName, '阿芙拉')
+  assert.deepEqual(run.createdCards.map((item) => item.path), ['cards/阿芙拉.json'])
+  assert.deepEqual(saved.createdCard, { path: 'cards/阿芙拉.json', name: '阿芙拉' })
+  const duplicate = await run.orchestrator.finalize({ sessionId: 'session-1', turn: 6, userText: '确认角色和玩家', assistantText: '重复回调' })
+  assert.equal(duplicate.duplicate, true)
+  assert.equal(run.createdCards.length, 1)
+  assert.deepEqual(await run.orchestrator.visibleTools('session-1'), ['tavern_memory_search', 'tavern_memory_preference', 'tavern_memory_experience', 'web_search', 'bash', 'str_replace_editor', 'read', 'write', 'edit', 'read_image', 'skill', 'tavern_read_skill_reference', 'tavern_save_skill', 'cordis_inspect_list', 'cordis_inspect_query', 'cordis_inspect_self', 'cordis_define', 'cordis_run', 'cordis_stop', 'cordis_undefine', 'tavern_user_profile_read', 'tavern_user_profile_save', 'tavern_read_card', 'tavern_read_card_raw', 'tavern_read_play_chat', 'tavern_read_worldbook', 'tavern_update_worldbook', 'tavern_read_preset', 'tavern_update_preset', 'tavern_copy_card', 'tavern_card_draft', 'tavern_read_mvu_appearance', 'tavern_update_mvu_appearance', 'tavern_validate_mvu_conversion', 'tavern_update_card', 'tavern_restore_card', 'tavern_validate_card', 'tavern_test_response'])
+})
+
+test('游戏前台按快照启用联网搜索，卡片工作台始终启用', async () => {
+  assert.deepEqual(await harness('story').orchestrator.visibleTools('session-1'), ['tavern_read_variables', 'skill', 'tavern_read_skill_reference', 'tavern_recall_history', 'worldbook_search'])
+  assert.deepEqual(await harness('story', { webSearchEnabled: true }).orchestrator.visibleTools('session-1'), ['tavern_read_variables', 'skill', 'tavern_read_skill_reference', 'tavern_recall_history', 'worldbook_search', 'web_search'])
+  assert.deepEqual(await harness('script', { webSearchEnabled: true }).orchestrator.visibleTools('session-1'), ['tavern_read_variables', 'skill', 'tavern_read_skill_reference', 'tavern_read_script', 'tavern_recall_history', 'worldbook_search', 'web_search'])
+  for (const webSearchEnabled of [false, true]) {
+    assert.equal((await harness('card', { webSearchEnabled }).orchestrator.visibleTools('session-1')).includes('web_search'), true)
+  }
+})
+
+test('脚本提示实际走本轮准备、Frame 与一次性消费，重复准备不丢失', async () => {
+  const run = harness('story', {
+    planner: createContextPlanner({ prompt: () => '写作规则' }),
+    projectScriptPromptWorldbook: async ({ chat }) => ({ context: chat.tavernScriptPrompts.some(p => p.content === '王都') ? '王都的城门设定' : '' })
+  })
+  const state = run.chat()
+  state.tavernScriptPrompts = [
+    { id: 'place', content: '王都', position: 'none', role: 'system', depth: 0, should_scan: true, once: true },
+    { id: 'event', content: '本轮事件要求', position: 'in_chat', role: 'system', depth: 0, should_scan: false, once: true }
+  ]
+  run.replaceChat(state)
+  const input = { sessionId: 'session-1', turn: 1, userText: '继续' }
+  const first = await run.orchestrator.prepare(input)
+  assert.match(foregroundFrameText(first.frame), /王都的城门设定/)
+  assert.match(foregroundFrameText(first.frame), /本轮事件要求/)
+  assert.deepEqual(run.chat().tavernScriptPrompts, [])
+  const repeated = await run.orchestrator.prepare(input)
+  assert.deepEqual(repeated.frame, first.frame)
+})
+
+test('new card is created and bound before tool returns; next write updates the same file', async () => {
+  const run = harness('card', { draft: true })
+  await run.orchestrator.saveChanges({ sessionId: 'session-1', turn: 1, fields: { name: '新角色', player: '旅人' } })
+  assert.equal(run.chat().cardPath, 'cards/新角色.json')
+  assert.equal(run.createdCards.length, 1)
+  await run.orchestrator.saveChanges({ sessionId: 'session-1', turn: 1, fields: { description: '第二次修改' } })
+  assert.equal(run.card().description, '第二次修改')
+  assert.equal(run.createdCards.length, 1)
+})
+
+test('repair workbench reaches tools and completes even when its card cannot parse', async () => {
+  const run = harness('card', { brokenCard: true })
+  const prepared = await run.orchestrator.prepare({ sessionId: 'session-1', turn: 1, userText: '校验并修复人物卡' })
+  assert.equal(prepared.ready, true)
+  assert.ok((await run.orchestrator.visibleTools('session-1')).includes('tavern_validate_card'))
+  const done = await run.orchestrator.finalize({ sessionId: 'session-1', turn: 1, userText: '校验', assistantText: '文件格式仍需修复' })
+  assert.equal(done.saved, true)
+  const play = harness('story', { brokenCard: true })
+  await assert.rejects(play.orchestrator.prepare({ sessionId: 'session-1', turn: 1, userText: '继续' }), /invalid JSON/)
+})
+
+test('玩家模板先于本轮召回，重试不重复执行；提交后只产生一条玩家消息', async () => {
+  for (const compatibility of [false,true]) {
+    let calls=0
+    const run=harness('story',{projectUserTemplate:async()=>{
+      calls++
+      return {message:{role:'user',text:'进入少林',variables:[{place:'少林'}],tavernPluginData:{is_ejs_processed:[true]}},scopes:{local:{place:'少林'},initial:{}}}
+    },projectForegroundWorldbook:async({chat,userText})=>{
+      assert.equal(chat.variables.place,'少林');assert.equal(userText,'进入少林')
+      return {context:'少林名册',activation:{refs:[]},refs:[],reads:{}}
+    }})
+    const input={sessionId:'session-1',turn:2,userText:'原始模板'}
+    const start=compatibility?'beginCompatibility':'prepare'
+    const first=await run.orchestrator[start](input)
+    await run.orchestrator[start](input)
+    assert.equal(calls,1)
+    assert.equal(first.userText,'进入少林')
+    assert.equal(run.chat().messages.length,0)
+    await run.orchestrator.finalize({...input,assistantText:'少林的僧人迎上前。'})
+    assert.equal(run.chat().messages.length,2)
+    assert.equal(run.chat().messages[0].text,'进入少林')
+    assert.equal(run.chat().messages[0].variables[0].place,'少林')
+    assert.equal(run.chat().promptTemplateInput,undefined)
+  }
+})
+
+for (const mode of ['story', 'script']) test(mode + ' 缺少人物卡绑定时明确拒绝开始回合', async () => {
+  const run = harness(mode, { draft: true })
+  await assert.rejects(run.orchestrator.prepare({ sessionId: 'session-1', turn: 1, userText: '继续' }), /缺少人物卡绑定/)
+  assert.equal(run.plannerCalls.length, 0)
+})

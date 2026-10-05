@@ -1,0 +1,14 @@
+2317032fd0dd091f220f1c91ee749b6388f79c0ccd795f14e60522ddd6329ca8  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/backup.mjs
+f8a96f0d5bc7ec62567c421dcbf796148df4a6f203c5a8ec3f8355428bcf86ab  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/behavior.mjs
+a27316534143109c532ad739095a73eee74bc88d015bbdc7f1e8293ad62d70d6  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/domain-state.mjs
+627967849a3a733b3a7d58e8398ea4a6eb0f2eae2d95b09a62e839d7e8098498  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/host.mjs
+77836f012cd9ae10f0e74c49618fdd58833dcbd967d51c6418043d602c8cd91e  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/import-formats.mjs
+5f9f075b6d36e15243adb8d3622a640dbd8fdad860ad5db6774f0411de5280cd  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/import-risu.mjs
+4fdd62ec2dc41e365f373be503d5e9658f3b371f36c2cccfc8c51ec4312c832d  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/importer.mjs
+abede85c09a307b0a03b216145e5f0c26747622f14208f1845e43f6c1cf34972  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/knowledge.mjs
+be4ec5f42481fe1874a0135a4c4f0e39e2a270e5ede6ddb94caed6ecbdaf9948  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/model.mjs
+1dd140e011cc2135a9eda1066c31bf2177666236ee266d8b543d7c25723d2e5d  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/observability.mjs
+5ef38a4e682cf816f1b58c093b452cbcfb4319212114738168fa70d8dca3fbd7  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/server.mjs
+ee2f4f07f36a9304a2f69a540e73c8a8e0419b1f8e6cacbceb09bb6bee6a5ef1  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/store-test-support.mjs
+fca1c10b56b698bc3f989d159a3903f78472102dde22b0d5f7ef625799c79157  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/src/store.mjs
+30e0dc39450d7635d1f94185b9bcc3bebe32251fad60464e89785ef55e9fe0d3  dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/public/app.js
