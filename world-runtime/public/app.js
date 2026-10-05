@@ -1,95 +1,1577 @@
-const $=id=>document.getElementById(id);
-const state={worlds:[],cards:[],snapshot:null,author:false,tab:'people',config:null,active:null,sending:false,navigating:false,viewPending:false,request:0,refreshTimer:null};
-const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
-const button=(text,fn,cls)=>{const n=el('button',text,cls);n.type='button';n.addEventListener('click',fn);return n;};
-function announce(text,error=false){$('notification').textContent=text;$('notification').className='notification'+(error?' error':'');$('notification').hidden=false;if(error&&$('dialog').open){let note=$('dialogBody').querySelector('.dialog-error');if(!note){note=el('p',undefined,'dialog-note dialog-error');note.setAttribute('role','alert');$('dialogBody').prepend(note);}note.textContent=text;}}
-async function api(path,data){const response=await fetch(path,data===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});const value=await response.json();if(!response.ok)throw new Error(value.error?.message||'操作未完成');return value;}
-async function guarded(fn){try{return await fn();}catch(e){announce(e.message,true);}}
-function name(id){return state.snapshot?.state.characters.find(c=>c.id===id)?.name||id;}
-function showDialog(title,body,actions=[]){$('dialogTitle').textContent=title;$('dialogBody').replaceChildren(body);$('dialogActions').replaceChildren(...actions);$('dialog').showModal();}
-$('dialogClose').addEventListener('click',e=>{e.preventDefault();$('dialog').close();});$('dialog').querySelector('form').addEventListener('submit',e=>e.preventDefault());
-function field(label,type='text',value=''){const wrap=el('label',label,'dialog-field');const input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;input.value=value;wrap.append(input);return {wrap,input};}
-function selectField(label,options,value){const wrap=el('label',label,'dialog-field'),input=el('select');for(const [id,text]of options){const o=el('option',text);o.value=id;input.append(o);}if(value!==undefined)input.value=value;wrap.append(input);return {wrap,input};}
-async function refreshLists(){const [w,c]=await Promise.all([api('/api/worlds'),api('/api/cards')]);state.worlds=w.worlds;state.cards=c.cards;renderLists();}
-function renderLists(){
- $('worldCount').textContent=state.worlds.length;$('worldList').replaceChildren(...state.worlds.map(w=>{const b=button('',()=>guarded(()=>loadWorld(w.id)), 'world-link'+(state.snapshot?.world.id===w.id?' active':''));b.append(el('strong',w.name),el('span','本地存档 · '+new Date(w.updatedAt||w.createdAt).toLocaleDateString()));b.dataset.worldId=w.id;return b;}));
- $('cardList').replaceChildren(...state.cards.map(c=>{const row=el('div',undefined,'card-tile'),image=c.assets?.find(x=>x.mime?.startsWith('image/'));if(image){const img=el('img');img.src='/assets/'+image.id;img.alt=c.name;row.append(img);}else row.append(el('span',c.name.slice(0,1),'card-icon'));row.append(button(c.name,()=>createWorldDialog(c.id)),button('报告',()=>guarded(()=>cardReport(c.id)),'small'));return row;}));
+const $ = (id) => document.getElementById(id);
+const state = {
+  worlds: [],
+  cards: [],
+  snapshot: null,
+  author: false,
+  tab: "people",
+  config: null,
+  active: null,
+  sending: false,
+  navigating: false,
+  viewPending: false,
+  request: 0,
+  refreshTimer: null,
+};
+const el = (tag, text, cls) => {
+  const n = document.createElement(tag);
+  if (text !== undefined) n.textContent = String(text);
+  if (cls) n.className = cls;
+  return n;
+};
+const button = (text, fn, cls) => {
+  const n = el("button", text, cls);
+  n.type = "button";
+  n.addEventListener("click", fn);
+  return n;
+};
+function announce(text, error = false) {
+  $("notification").textContent = text;
+  $("notification").className = "notification" + (error ? " error" : "");
+  $("notification").hidden = false;
+  if (error && $("dialog").open) {
+    let note = $("dialogBody").querySelector(".dialog-error");
+    if (!note) {
+      note = el("p", undefined, "dialog-note dialog-error");
+      note.setAttribute("role", "alert");
+      $("dialogBody").prepend(note);
+    }
+    note.textContent = text;
+  }
 }
-async function cardReport(id){const result=await api('/api/cards/'+id),wrap=el('div');for(const r of result.report){const n=el('div',undefined,'report-item');n.append(el('strong',r.status+' · '+r.field),el('div',r.message));wrap.append(n);}showDialog('卡片报告 · '+result.card.name,wrap,[button('下载原件',()=>window.location.assign('/api/cards/'+id+'/original')),button('关闭',()=>$('dialog').close(),'primary')]);}
-async function loadWorld(id,branchId){clearTimeout(state.refreshTimer);const ticket=++state.request;state.navigating=true;const wantedAuthor=state.author;try{const query=new URLSearchParams({view:wantedAuthor?'author':'player'});if(branchId)query.set('branchId',branchId);const s=await api('/api/worlds/'+id+'?'+query);if(ticket!==state.request||wantedAuthor!==state.author)return;state.viewPending=false;state.snapshot=s;try{localStorage.setItem('story-runtime-selection',JSON.stringify({worldId:id,branchId:s.branch.id}));}catch{}renderWorld();renderLists();const pending=(s.runs||[]).find(r=>['accepted','generating','draft'].includes(r.status));if(!state.active&&pending){if(!$('messageInput').value)$('messageInput').value=pending.userText;watchRun(pending.token,{worldId:id,branchId:s.branch.id,worldName:s.world.name,input:pending.userText,text:pending.draft||'',mode:pending.mode});}}finally{if(ticket===state.request)state.navigating=false;}}
-async function refreshWorld(){if(state.navigating)return;if(state.snapshot)await loadWorld(state.snapshot.world.id,state.snapshot.branch.id);}
-function createWorldDialog(cardId){const wrap=el('div');wrap.append(el('p','选择本地演示，或使用已导入的卡片创建独立世界。所有世界互相隔离。','dialog-note'));const title=field('世界名称','text','');const card=selectField('故事卡',[['','钟楼镇 · 本地演示'],...state.cards.map(c=>[c.id,c.name])],cardId||'');const greeting=selectField('开场',[['0','默认开场']]);function greetings(){const c=state.cards.find(c=>c.id===card.input.value);greeting.input.replaceChildren();for(const [i,text]of ['默认开场',...(c?.alternateGreetings||[]).map((s,i)=>`替代开场 ${i+1} · ${s.slice(0,40)}`)].entries()){const o=el('option',text);o.value=i;greeting.input.append(o);}}card.input.onchange=greetings;greetings();wrap.append(title.wrap,card.wrap,greeting.wrap);const create=button('创建并进入',()=>guarded(async()=>{create.disabled=true;try{const s=await api('/api/worlds',{name:title.input.value||undefined,cardId:card.input.value||undefined,greetingIndex:Number(greeting.input.value)});$('dialog').close();await refreshLists();await loadWorld(s.world.id,s.branch.id);announce('世界已创建。你可以开始交谈，或查看作者视图中的人物日程。');}finally{create.disabled=false;}}),'primary');showDialog('创建你的世界',wrap,[button('取消',()=>$('dialog').close()),create]);}
-$('newWorld').onclick=()=>createWorldDialog();$('createDemo').onclick=()=>guarded(async()=>{const b=$('createDemo');b.disabled=true;try{const s=await api('/api/worlds',{name:'钟楼镇 · 我的故事'});await refreshLists();await loadWorld(s.world.id,s.branch.id);}finally{b.disabled=false;}});
-$('importButton').onclick=()=>$('fileInput').click();$('fileInput').onchange=()=>guarded(async()=>{const file=$('fileInput').files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('浏览器导入上限20 MiB，请先缩小资源包');$('importButton').disabled=true;try{announce('正在校验角色卡与本地素材…');const base64=await new Promise((yes,no)=>{const reader=new FileReader();reader.onload=()=>yes(String(reader.result).split(',')[1]);reader.onerror=()=>no(new Error('无法读取文件'));reader.readAsDataURL(file);});const result=await api('/api/import',{filename:file.name,base64});await refreshLists();const wrap=el('div');wrap.append(el('p','原件与未知字段已保留。不受支持的脚本不会自动执行。','dialog-note'));for(const r of result.report){const row=el('div',undefined,'report-item');row.append(el('strong',({mapped:'已映射',preserved:'已保留',unsupported:'不支持',blocked:'已阻止',missing:'缺失'})[r.status]||r.status),el('div',r.field),el('div',r.message));wrap.append(row);}showDialog('导入完成 · '+result.card.name,wrap,[button('关闭',()=>$('dialog').close()),button('用此卡创建世界',()=>{$('dialog').close();createWorldDialog(result.card.id);},'primary')]);announce('导入完成，请查看逐项迁移报告。');}finally{$('importButton').disabled=false;$('fileInput').value='';}});
-function sceneCard(scene,index){const article=el('article',undefined,'scene');article.dataset.sceneId=scene.id;const label=el('div',undefined,'scene-label');label.append(el('span',`${String(index+1).padStart(2,'0')}  ·  ${scene.source==='demo'?'本地演示':scene.source==='openai'?'模型续写':scene.source==='schedule'?'世界事件':'正式提交'}${scene.inherited?' · 继承场景':''}  ·  ${scene.id.slice(0,8)}`));const tools=el('span');tools.append(button('从这里分支',()=>forkDialog(scene.id)));if(state.author)tools.append(button('改写此段',()=>reviseDialog(scene)));label.append(tools);article.append(label);if(scene.userText)article.append(el('div',scene.userText,'user-line'));article.append(el('div',scene.displayNarrative??scene.narrative,'prose'));if(state.author&&scene.operations?.length){const details=el('details');details.append(el('summary',`${scene.operations.length} 项状态变化`),el('pre',JSON.stringify(scene.operations,null,2),'dialog-code'));article.append(details);}return article;}
-function renderWorld(){const s=state.snapshot;const ready=!!s;$('welcome').hidden=ready;$('worldView').hidden=!ready;$('composer').hidden=!ready;$('inspectorEmpty').hidden=ready;$('inspectorBody').hidden=!ready;if(!ready)return;
- $('worldTitle').textContent=s.world.name;$('worldDescription').textContent=s.world.card.description?.slice(0,200)||'';$('worldTime').textContent='世界时间 '+s.state.time;$('authorNotice').hidden=!state.author;$('authorAction').hidden=!state.author;
- $('branchSelect').replaceChildren(...s.branches.map(b=>{const o=el('option',b.name);o.value=b.id;return o;}));$('branchSelect').value=s.branch.id;
- $('cardActions').replaceChildren(...(s.world.card.actions||(Array.isArray(s.world.card.extensions?.story_runtime?.actions)?s.world.card.extensions.story_runtime.actions.map((a,index)=>({index,label:a?.label||'卡片动作'})):[])||[]).map(a=>{const b=button(a.label,()=>guarded(async()=>{b.disabled=true;try{await api('/api/worlds/'+s.world.id+'/card-action',{branchId:s.branch.id,actionIndex:a.index,runId:crypto.randomUUID(),expectedHead:s.branch.head});await refreshWorld();announce('卡片动作已提交。');}finally{b.disabled=false;}}));return b;}));
- $('sceneList').replaceChildren(...s.scenes.map(sceneCard));if(!s.scenes.length){const open=el('article',undefined,'scene');open.append(el('div','导入开场 · 设定素材，不自动触发物品或世界变化','scene-label'),el('div',s.world.card.openingPreview??s.world.card.firstMessage??'这个世界还没有正式场景。写下第一句话吧。','prose'));$('sceneList').append(open);}
- $('projectionNotice').hidden=!s.projectionError;if(s.projectionError){$('projectionNotice').replaceChildren(el('span','世界已保存，但宿主投影待恢复：'+s.projectionError.message+' '),button('重试界面同步',()=>guarded(async()=>{await api('/api/worlds/'+s.world.id+'/recover-projection',{branchId:s.branch.id});await refreshWorld();})));}
- $('advanceTime').min=s.state.time;$('advanceTime').value=s.state.time+1;renderInspector();renderRuns();renderActive();
- clearTimeout(state.refreshTimer);if(s.autonomy?.enabled||(s.outbox.some(x=>x.status==='pending')&&!s.projectionError))state.refreshTimer=setTimeout(()=>guarded(refreshWorld),1200);
+async function api(path, data) {
+  const response = await fetch(
+    path,
+    data === undefined
+      ? {}
+      : {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(data),
+        },
+  );
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error?.message || "操作未完成");
+  return value;
 }
-function renderActive(){const a=state.active;$('runBar').hidden=!a;if(a)$('runBarText').textContent=a.phase==='projecting'?'世界已保存，正在同步宿主视图，无需重新生成':'正在继续「'+a.worldName+'」 · 草稿尚未提交';$('globalCancel').disabled=a?.phase==='projecting';$('sendButton').disabled=!!a||state.sending;$('modelMode').disabled=!!a;const here=a&&state.snapshot?.world.id===a.worldId&&state.snapshot?.branch.id===a.branchId;$('draftCard').hidden=!here;if(here)$('draftText').textContent=a.text||'正在等待正文…';}
-function renderRuns(){if(state.viewPending){$('runHistory').replaceChildren();return;}const runs=(state.snapshot?.runs||[]).filter(r=>['failed','cancelled','interrupted','draft'].includes(r.status));$('runHistory').replaceChildren(...runs.slice(0,8).map(r=>{const d=el('details');d.append(el('summary',({failed:'生成/结算未完成',cancelled:'已取消',interrupted:'重启后已暂停',draft:'未提交草稿'})[r.status]+' · '+new Date(r.updatedAt).toLocaleTimeString()),el('p',r.error?.message||'这次草稿没有改变世界。'));if(r.draft)d.append(el('pre',r.draft));if(r.canRetrySettlement)d.append(button('仅重试结算 · 不调用模型',()=>guarded(async()=>{const a=await api('/api/runs/'+r.token+'/retry',{});watchRun(a.runId,{worldId:state.snapshot.world.id,branchId:state.snapshot.branch.id,worldName:state.snapshot.world.name,text:r.draft});})));return d;}));}
-function row(title,detail,extra){const n=el('div',undefined,'state-item');n.append(el('strong',title));if(detail!==undefined)n.append(el('p',detail));if(extra)n.append(el('small',extra));return n;}
-function renderInspector(){if(state.viewPending){$('inspectorContent').replaceChildren(el('p','正在切换信息视图…','empty'));return;}const s=state.snapshot;if(!s)return;const root=$('inspectorContent'),nodes=[];const heading=x=>nodes.push(el('h3',x,'subheading'));const empty=x=>nodes.push(el('p',x,'empty'));const add=list=>nodes.push(...list);
- if(state.tab==='people'){add(s.state.characters.map(c=>{const n=row(c.name+((c.kind&&c.kind!=='character')?' · '+c.kind:''),'位置：'+(c.location??'尚未知晓'),c.id);if(state.author&&(c.kind??'character')==='character')n.append(button('查看此人物认知',()=>guarded(()=>actorDialog(c))));return n;}));heading('玩家认知');add(s.state.beliefs.map(b=>row(name(b.subjectId)+' · '+b.key,String(b.value), '认知持有者：'+name(b.holderId))));if(!s.state.beliefs.length)empty('认知与世界事实分开；人物不会自动全知。');}
- if(state.tab==='relations'){add(s.state.relations.map(r=>{const n=row(name(r.from)+' → '+name(r.to),r.type+(r.detail?' · '+r.detail:'')+(r.status==='ended'?' · 已终止':''),r.sourceCommitId?'来源 '+r.sourceCommitId.slice(0,8):'');if(r.sourceCommitId)n.append(button('查看来源',()=>document.querySelector(`[data-scene-id="${CSS.escape(r.sourceCommitId)}"]`)?.scrollIntoView({behavior:'smooth'})));if(state.author){n.append(button('编辑关系',()=>relationDialog(r)));if(r.status!=='ended')n.append(button('终止关系',()=>submitAction([{op:'end_relation',id:r.id}],'作者终止了一项关系，历史保留。')));}return n;}));if(!s.state.relations.length)empty('关系会随正式事件变化。作者可以建立多值、有方向的关系。');}
- if(state.tab==='world'){heading('事实与来源');add(s.state.facts.map(f=>{const n=row(f.key,(typeof f.value==='string'?f.value:JSON.stringify(f.value))+(f.locked?' · 已锁定':''));if(f.sourceCommitId)n.append(button('查看来源',()=>document.querySelector(`[data-scene-id="${CSS.escape(f.sourceCommitId)}"]`)?.scrollIntoView({behavior:'smooth',block:'center'})));return n;}));if(!s.state.facts.length)empty('尚无当前可见事实。');heading('物品');add(s.state.inventory.map(i=>row(i.item+' × '+i.quantity,name(i.entityId))));heading('变量');add(Object.entries(s.state.variables).map(([k,v])=>row(k,String(v))));heading('伏笔');add(s.state.plotThreads.map(p=>{const n=row(p.label,p.status);if(state.author)for(const [status,label]of [['planted','标为已埋'],['partially_resolved','部分回收'],['resolved','完成回收']])if(p.status!==status)n.append(button(label,()=>submitAction([{op:'set_plot_thread',id:p.id,label:p.label,status}],'作者确认了线索状态与来源。')));return n;}));}
- if(state.tab==='plans'){heading('目标');add(s.state.goals.map(g=>{const n=row(name(g.entityId),g.text+' · '+g.status);if(state.author&&g.status!=='achieved')n.append(button('标为完成',()=>submitAction([{op:'set_goal',id:g.id,entityId:g.entityId,text:g.text,status:'achieved'}],'作者确认了目标完成。')));return n;}));heading('日程');add(s.state.schedules.map(q=>{const n=row(q.label,'时间 '+q.at+' · '+name(q.entityId)+' · '+q.status);if(state.author&&q.status==='pending')n.append(button('取消日程',()=>submitAction([{op:'cancel_schedule',id:q.id}],'作者取消了一项日程。')));return n;}));if(!state.author)empty('幕后目标和NPC日程需主动切换作者视图查看。自主推进不会替玩家做重大决定。');}
- if(state.tab==='usage'){const summary=s.usageSummary;if(summary){heading('使用量与费用');add([row('模型尝试 '+summary.modelAttempts+' · 失败/取消 '+summary.failedAttempts,(summary.estimatedCost===null?'费用未知':`估算 ${summary.estimatedCost.toFixed(6)} ${summary.currency}`)+' · '+summary.usageCompleteness,'手动价格估算，不是账单；缺usage不会当免费')]);}if(s.contextDiagnostic){const d=s.contextDiagnostic;heading('本地上下文诊断');add([row('请求字节 '+d.requestBytes,'共同前缀 '+(d.commonPrefixBytes??'尚无同作用域前次请求')+' · 首个变化消息 '+(d.firstChangedMessage??'未知'),'仅本地字节相似度，不是供应商缓存命中率')]);}heading('模型调用账本');add(s.usage.slice(-20).reverse().map(u=>row(u.mode==='demo'?'本地演示 · 非模型费用':'OpenAI-compatible 调用',`输入 ${u.inputTokens??'未知'} · 缓存 ${u.cachedInputTokens??'未知'} · 输出 ${u.outputTokens??'未知'}`,u.status)));if(!s.usage.length)empty('没有模型尝试。世界日程由确定性规则推进时不产生API调用。');heading('持久投影');add([row('已同步 '+s.outbox.filter(o=>o.status==='delivered').length+' / '+s.outbox.length,'正文、状态与outbox共同保存；宿主同步失败不会重新生成。')]);}
- root.replaceChildren(...nodes);for(const b of document.querySelectorAll('[data-tab]'))b.setAttribute('aria-selected',String(b.dataset.tab===state.tab));
- const a=s.autonomy||{};$('autoButton').textContent=a.enabled?'暂停自主推进':'开启自主推进';$('autoStatus').textContent=a.lastError?.message||(a.enabled?`运行中 · 剩余 ${a.remainingEvents} 个事件 · 到时停止`:'默认关闭；重启后暂停，空日程不调用模型');
+async function guarded(fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    announce(e.message, true);
+  }
 }
-for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{state.tab=b.dataset.tab;renderInspector();};
-$('authorToggle').onchange=()=>guarded(async()=>{state.author=$('authorToggle').checked;if($('dialog').open)$('dialog').close();state.viewPending=true;$('inspectorContent').replaceChildren(el('p','正在切换信息视图…','empty'));$('sceneList').replaceChildren();$('runHistory').replaceChildren();$('authorNotice').hidden=true;$('authorAction').hidden=true;const s=state.snapshot;if(s)await loadWorld(s.world.id,s.branch.id);});$('refreshWorld').onclick=()=>guarded(refreshWorld);$('branchSelect').onchange=()=>guarded(async()=>{clearTimeout(state.refreshTimer);const intent=++state.request;const s=state.snapshot,b=$('branchSelect').value;await api('/api/worlds/'+s.world.id+'/select-branch',{branchId:b});if(intent!==state.request)return;await loadWorld(s.world.id,b);});
-function forkDialog(commitId){const s=state.snapshot,wrap=el('div'),f=field('新分支名称','text','另一条路');wrap.append(el('p','新分支只继承到选定提交。原分支与后续剧情会完整保留。','dialog-note'),f.wrap);showDialog('开启另一条时间线',wrap,[button('取消',()=>$('dialog').close()),button('创建分支',()=>guarded(async()=>{const next=await api('/api/worlds/'+s.world.id+'/fork',{branchId:s.branch.id,commitId,name:f.input.value||'另一条路'});$('dialog').close();await loadWorld(next.world.id,next.branch.id);await refreshLists();}),'primary')]);}
-$('forkCurrent').onclick=()=>forkDialog(state.snapshot?.branch.head??null);
-function reviseDialog(scene){const s=state.snapshot,wrap=el('div'),text=field('修订后的正文','textarea',scene.narrative);wrap.append(el('p','会在这段正文之前创建新分支。旧后续事实、日程和剧情不会继承；原分支保留。新状态变化请另用作者操作明确提交，不会自动猜测。','dialog-note'),text.wrap);showDialog('改写历史 · 保留原分支',wrap,[button('取消',()=>$('dialog').close()),button('确认修订',()=>guarded(async()=>{const next=await api('/api/worlds/'+s.world.id+'/revise',{branchId:s.branch.id,commitId:scene.id,narrative:text.input.value,operations:[]});$('dialog').close();await loadWorld(next.world.id,next.branch.id);await refreshLists();}),'primary')]);}
-function finishRun(message,error=false){const a=state.active;if(!a)return;a.stream.close();state.active=null;if($('modelMode').value==='openai'&&!state.config?.openaiConfigured){$('modelMode').value='demo';$('modelMode').onchange();}renderActive();if(message)announce(message,error);guarded(async()=>{await refreshLists();await refreshWorld();});}
-function watchRun(token,data){if(['demo','openai'].includes(data.mode)){$('modelMode').value=data.mode;$('modelMode').onchange();}if(state.active)state.active.stream.close();const a={...data,token,text:data.text||'',stream:new EventSource('/api/runs/'+token+'/events')};state.active=a;renderActive();a.stream.addEventListener('status',e=>{a.phase=JSON.parse(e.data).status;renderActive();});a.stream.addEventListener('delta',e=>{a.text+=JSON.parse(e.data).text;renderActive();});a.stream.addEventListener('draft',e=>{a.text=JSON.parse(e.data).text;renderActive();});a.stream.addEventListener('committed',e=>{if(state.active!==a)return;const result=JSON.parse(e.data);if($('messageInput').value===a.input)$('messageInput').value='';finishRun(result.projectionPending?'世界已保存，宿主同步仍在恢复。':(result.postCommitNotice||'正文与世界变化已保存。'));});a.stream.addEventListener('cancelled',()=>{if(state.active===a)finishRun('已取消，未提交草稿不会改变世界。');});a.stream.addEventListener('error',e=>{if(state.active!==a)return;if(e.data){finishRun(JSON.parse(e.data).message,true);}else{announce('连接中断，正在自动读取持久运行状态；请勿重复发送。',true);}});}
-$('composer').onsubmit=e=>{e.preventDefault();guarded(async()=>{if(state.active||state.sending)return;state.sending=true;const s=state.snapshot,message=$('messageInput').value.trim();if(!s||!message){state.sending=false;return;}$('sendButton').disabled=true;try{const result=await api('/api/worlds/'+s.world.id+'/turn',{branchId:s.branch.id,message,mode:$('modelMode').value,runId:crypto.randomUUID()});watchRun(result.runId,{worldId:s.world.id,branchId:s.branch.id,worldName:s.world.name,input:$('messageInput').value});}finally{state.sending=false;renderActive();}});};
-$('globalCancel').onclick=()=>guarded(async()=>{if(state.active)await api('/api/runs/'+state.active.token+'/cancel',{});});
-$('modelMode').onchange=()=>{$('modelHint').textContent=$('modelMode').value==='demo'?'演示回应由本地示例生成器产生，不是真实AI':'将调用你配置的模型服务，可能产生费用；缺失usage显示未知';};
-async function submitAction(operations,narrative){return guarded(async()=>{const s=state.snapshot;await api('/api/worlds/'+s.world.id+'/actions',{branchId:s.branch.id,runId:crypto.randomUUID(),expectedHead:s.branch.head,narrative,operations});$('dialog').close();await refreshWorld();announce('作者操作已正式提交。');});}
-function actionDialog(){const s=state.snapshot,wrap=el('div');wrap.append(el('p','只支持明确的世界变化。预览不会改变状态；任意JavaScript、Shell或网络脚本均不会运行。','dialog-note'));const kind=selectField('操作类型',[['create_entity','新增人物或实体'],['update_entity','编辑人物或实体'],['set_reference','导入或编辑大纲资料'],['mark_chapter','开始新章节'],['set_location','改变位置'],['change_inventory','增减物品'],['set_variable','设置变量'],['add_relation','建立关系'],['set_fact','记下事实'],['set_goal','设置目标'],['schedule','安排NPC行动'],['set_belief','记录人物认知'],['set_plot_thread','管理伏笔'],['advanced','高级：声明式JSON']]);wrap.append(kind.wrap);const fields=el('div'),preview=el('pre','点击“预览”检查待提交变化','dialog-code'),narrative=field('事件说明','text','作者确认了一项世界变化。');wrap.append(fields,narrative.wrap,preview);let read;
- const entities=s.state.characters.map(c=>[c.id,c.name+' · '+c.id]);
- function build(){fields.replaceChildren();const list=[];const f=(label,type='text',value='')=>{const x=field(label,type,value);list.push(x.wrap);return x.input;};const pick=(label,options,value)=>{const x=selectField(label,options,value);list.push(x.wrap);return x.input;};const entity=()=>pick('人物',entities,'card-main');const scalar=x=>{try{return JSON.parse(x);}catch{return x;}};
- if(kind.input.value==='create_entity'){const title=f('实体名称'),type=pick('实体种类',[['character','人物'],['organization','组织'],['location','地点'],['item','物品']]),aliases=f('别名（逗号分隔）'),description=f('实体描述','textarea');read=()=>[{op:'create_entity',name:title.value,kind:type.value,aliases:aliases.value.split(',').map(x=>x.trim()).filter(Boolean),description:description.value}];}
- if(kind.input.value==='update_entity'){const who=pick('编辑实体',entities),title=f('新名称'),aliases=f('别名（逗号分隔）'),description=f('实体描述','textarea'),privacy=pick('描述可见性',[['public','公开'],['private','仅自身和作者']]),locked=pick('锁定实体',[['false','未锁定'],['true','锁定']]);const fill=()=>{const c=s.state.characters.find(c=>c.id===who.value);title.value=c.name;aliases.value=(c.aliases||[]).join(',');description.value=c.description||'';privacy.value=c.descriptionVisibility||'public';locked.value=String(!!c.locked);};who.onchange=fill;fill();read=()=>[{op:'update_entity',id:who.value,name:title.value,aliases:aliases.value.split(',').map(x=>x.trim()).filter(Boolean),description:description.value,descriptionVisibility:privacy.value,locked:locked.value==='true'}];}
- if(kind.input.value==='set_reference'){const refs=s.state.references||[],which=pick('参考资料',[['','新增资料'],...refs.map(r=>[r.id,r.title])]),title=f('资料标题'),text=f('资料正文（大纲不自动成为正史）','textarea'),privacy=pick('资料可见性',[['public','公开参考'],['private','仅玩家与作者']]);which.onchange=()=>{const r=refs.find(r=>r.id===which.value);title.value=r?.title||'';text.value=r?.text||'';privacy.value=r?.visibility||'public';};read=()=>[{op:'set_reference',...(which.value?{id:which.value}:{}),title:title.value,text:text.value,visibility:privacy.value,holderId:'player'}];}
- if(kind.input.value==='mark_chapter'){const title=f('章节标题');read=()=>[{op:'mark_chapter',title:title.value}];}
- if(kind.input.value==='set_location'){const who=entity(),value=f('目的地');read=()=>[{op:'set_location',entityId:who.value,value:value.value}];}
- if(kind.input.value==='change_inventory'){const who=entity(),item=f('物品名称'),amount=f('数量变化（负数表示消耗）','number','1');read=()=>[{op:'change_inventory',entityId:who.value,item:item.value,amount:Number(amount.value)}];}
- if(kind.input.value==='set_variable'){const key=f('变量名','text','trust'),value=f('值（数字、布尔或文字）','text','1');read=()=>[{op:'set_variable',key:key.value,value:scalar(value.value)}];}
- if(kind.input.value==='add_relation'){const from=pick('关系起点',entities,'card-main'),to=pick('关系终点',entities,'player'),type=f('关系类型','text','friend_of'),detail=f('关系说明');read=()=>[{op:'add_relation',from:from.value,to:to.value,type:type.value,detail:detail.value}];}
- if(kind.input.value==='set_fact'){const key=f('事实名称'),value=f('事实内容','textarea'),visibility=pick('可见性',[['public','公开'],['private','人物私有']]),holder=pick('私有事实持有者',entities,'card-main'),locked=pick('锁定',[['false','允许后续更新'],['true','锁定，模型不可更改']]);read=()=>[{op:'set_fact',key:key.value,value:value.value,visibility:visibility.value,holderId:holder.value,locked:locked.value==='true'}];}
- if(kind.input.value==='set_goal'){const who=entity(),text=f('目标','textarea'),visibility=pick('可见性',[['public','公开'],['private','私有']]);read=()=>[{op:'set_goal',entityId:who.value,text:text.value,status:'active',visibility:visibility.value}];}
- if(kind.input.value==='schedule'){const who=entity(),label=f('事件说明'),at=f('到期世界时间','number',String(s.state.time+5)),location=f('届时前往的位置');read=()=>[{op:'schedule',entityId:who.value,label:label.value,at:Number(at.value),operations:[{op:'set_location',entityId:who.value,value:location.value}]}];}
- if(kind.input.value==='set_belief'){const holder=pick('认知持有者',entities,'player'),subject=pick('认知对象',entities,'card-main'),key=f('认知字段','text','location'),value=f('认知内容');read=()=>[{op:'set_belief',holderId:holder.value,subjectId:subject.value,key:key.value,value:value.value}];}
- if(kind.input.value==='set_plot_thread'){const label=f('线索'),status=pick('状态',[['planned','计划（仅作者）'],['planted','已埋设'],['partially_resolved','部分回收'],['resolved','已回收'],['abandoned','废弃']]);read=()=>[{op:'set_plot_thread',label:label.value,status:status.value}];}
- if(kind.input.value==='advanced'){const text=f('operations 数组（纯数据，不执行代码）','textarea','[{"op":"set_variable","key":"trust","value":1}]');read=()=>{const x=JSON.parse(text.value);if(!Array.isArray(x))throw new Error('需要JSON数组');return x;};}
- fields.append(...list);
- }kind.input.onchange=build;build();showDialog('作者操作 · 共同提交',wrap,[button('预览（不保存）',()=>guarded(()=>{preview.textContent=JSON.stringify(read(),null,2);})),button('提交世界变化',()=>guarded(()=>submitAction(read(),narrative.input.value||'作者操作')),'primary')]);}
-$('authorAction').onclick=actionDialog;$('advanceButton').onclick=()=>guarded(async()=>{const s=state.snapshot;const r=await api('/api/worlds/'+s.world.id+'/advance',{branchId:s.branch.id,to:Number($('advanceTime').value),maxEvents:10});await refreshWorld();announce(`推进完成：${r.executed.length} 项行动，${r.cancelled.length} 项条件失效。`);});
-$('autoButton').onclick=()=>guarded(async()=>{const s=state.snapshot;await api('/api/worlds/'+s.world.id+'/autonomy',{branchId:s.branch.id,enabled:!s.autonomy?.enabled,maxEvents:Number($('autoBudget').value),durationSeconds:Number($('autoDuration').value)});await refreshWorld();});
-$('exportButton').onclick=()=>{const s=state.snapshot;window.location.assign('/api/worlds/'+s.world.id+'/export?branchId='+encodeURIComponent(s.branch.id));};$('backupButton').onclick=()=>window.location.assign('/api/backup');
-$('helpButton').onclick=()=>{const wrap=el('div');for(const text of ['演示模式使用真实数据库、分支、导入、日程与宿主持久投影，但回应是确定性样例，不是真实AI。','真实模型：启动前设置STORY_OPENAI_BASE_URL、STORY_OPENAI_MODEL和可选STORY_OPENAI_API_KEY，然后在输入框上方选择真实模型。密钥只在服务端环境，不写存档或备份。','作者视图可看到幕后真相与计划；玩家不会自动知道其他人物的新位置。可以用“记录人物认知”显式设置已观察的信息。','备份下载为带SHA256清单的JSON文件。恢复只允许全新目录，不覆盖现有进度。'])wrap.append(el('p',text,'dialog-note'));wrap.append(el('pre','node world-runtime/cli.mjs restore BACKUP.story-backup.json --data-dir /new/directory\nnode world-runtime/cli.mjs serve --data-dir /new/directory','dialog-code'));showDialog('使用与恢复',wrap,[button('知道了',()=>$('dialog').close(),'primary')]);};
-window.addEventListener('beforeunload',()=>{state.active?.stream.close();clearTimeout(state.refreshTimer);});
-guarded(async()=>{state.config=await api('/api/config');$('connection').textContent='本地世界已就绪';const real=$('modelMode').querySelector('option[value=openai]');real.disabled=!state.config.openaiConfigured;real.textContent=state.config.openaiConfigured?'真实模型 · '+state.config.model:'真实模型 · 未配置';await refreshLists();if(state.worlds.length){let chosen;try{chosen=JSON.parse(localStorage.getItem('story-runtime-selection'));}catch{}const world=state.worlds.find(w=>w.id===chosen?.worldId)||state.worlds[0];try{await loadWorld(world.id,world.id===chosen?.worldId?chosen.branchId:undefined);}catch{await loadWorld(world.id);}}});
-
-$('knowledgeButton').onclick=()=>guarded(async()=>{
- const s=state.snapshot,author=state.author,ticket=state.request;
- const query=new URLSearchParams({branchId:s.branch.id,view:author?'author':'player'}),base='/api/worlds/'+s.world.id;
- const data=await api(base+'/chapters?'+query);
- if(ticket!==state.request||author!==state.author)return;
- const wrap=el('div'),search=field('查找人物、事实或原文'),results=el('div');
- wrap.append(el('p',(author?'作者资料含隐藏信息。':'玩家资料仅含当前可见信息。')+'章节摘录从当前分支原文重建，修订后不继承被撤销的未来。','dialog-note'),search.wrap,button('查询',()=>guarded(async()=>{const q=new URLSearchParams(query);q.set('q',search.input.value);const found=await api(base+'/knowledge-search?'+q);if(ticket!==state.request||author!==state.author){$('dialog').close();return;}results.replaceChildren(...found.results.map(r=>row(r.kind+' · '+r.id,r.text,r.sourceCommitId?'来源 '+r.sourceCommitId:'')));})),results);
- for(const chapter of data.chapters){const section=el('section');section.append(el('h3',chapter.title));for(const excerpt of chapter.excerpts)section.append(row(excerpt.text+(excerpt.truncated?'…':''),'原文摘录',excerpt.sourceCommitId));wrap.append(section);}
- showDialog('知识、章节与来源',wrap,[button('导出当前视图知识包',()=>window.location.assign(base+'/knowledge?'+query)),button('关闭',()=>$('dialog').close(),'primary')]);
+function name(id) {
+  return state.snapshot?.state.characters.find((c) => c.id === id)?.name || id;
+}
+function showDialog(title, body, actions = []) {
+  $("dialogTitle").textContent = title;
+  $("dialogBody").replaceChildren(body);
+  $("dialogActions").replaceChildren(...actions);
+  $("dialog").showModal();
+}
+$("dialogClose").addEventListener("click", (e) => {
+  e.preventDefault();
+  $("dialog").close();
+});
+$("dialog")
+  .querySelector("form")
+  .addEventListener("submit", (e) => e.preventDefault());
+function field(label, type = "text", value = "") {
+  const wrap = el("label", label, "dialog-field");
+  const input = el(type === "textarea" ? "textarea" : "input");
+  if (type !== "textarea") input.type = type;
+  input.value = value;
+  wrap.append(input);
+  return { wrap, input };
+}
+function selectField(label, options, value) {
+  const wrap = el("label", label, "dialog-field"),
+    input = el("select");
+  for (const [id, text] of options) {
+    const o = el("option", text);
+    o.value = id;
+    input.append(o);
+  }
+  if (value !== undefined) input.value = value;
+  wrap.append(input);
+  return { wrap, input };
+}
+async function refreshLists() {
+  const [w, c] = await Promise.all([api("/api/worlds"), api("/api/cards")]);
+  state.worlds = w.worlds;
+  state.cards = c.cards;
+  renderLists();
+}
+function renderLists() {
+  $("worldCount").textContent = state.worlds.length;
+  $("worldList").replaceChildren(
+    ...state.worlds.map((w) => {
+      const b = button(
+        "",
+        () => guarded(() => loadWorld(w.id)),
+        "world-link" + (state.snapshot?.world.id === w.id ? " active" : ""),
+      );
+      b.append(
+        el("strong", w.name),
+        el(
+          "span",
+          "本地存档 · " +
+            new Date(w.updatedAt || w.createdAt).toLocaleDateString(),
+        ),
+      );
+      b.dataset.worldId = w.id;
+      return b;
+    }),
+  );
+  $("cardList").replaceChildren(
+    ...state.cards.map((c) => {
+      const row = el("div", undefined, "card-tile"),
+        image = c.assets?.find((x) => x.mime?.startsWith("image/"));
+      if (image) {
+        const img = el("img");
+        img.src = "/assets/" + image.id;
+        img.alt = c.name;
+        row.append(img);
+      } else row.append(el("span", c.name.slice(0, 1), "card-icon"));
+      row.append(
+        button(c.name, () => createWorldDialog(c.id)),
+        button("报告", () => guarded(() => cardReport(c.id)), "small"),
+      );
+      return row;
+    }),
+  );
+}
+async function cardReport(id) {
+  const result = await api("/api/cards/" + id),
+    wrap = el("div");
+  for (const r of result.report) {
+    const n = el("div", undefined, "report-item");
+    n.append(el("strong", r.status + " · " + r.field), el("div", r.message));
+    wrap.append(n);
+  }
+  showDialog("卡片报告 · " + result.card.name, wrap, [
+    button("下载原件", () =>
+      window.location.assign("/api/cards/" + id + "/original"),
+    ),
+    button("关闭", () => $("dialog").close(), "primary"),
+  ]);
+}
+async function loadWorld(id, branchId) {
+  clearTimeout(state.refreshTimer);
+  const ticket = ++state.request;
+  state.navigating = true;
+  const wantedAuthor = state.author;
+  try {
+    const query = new URLSearchParams({
+      view: wantedAuthor ? "author" : "player",
+    });
+    if (branchId) query.set("branchId", branchId);
+    const s = await api("/api/worlds/" + id + "?" + query);
+    if (ticket !== state.request || wantedAuthor !== state.author) return;
+    state.viewPending = false;
+    state.snapshot = s;
+    try {
+      localStorage.setItem(
+        "story-runtime-selection",
+        JSON.stringify({ worldId: id, branchId: s.branch.id }),
+      );
+    } catch {}
+    renderWorld();
+    renderLists();
+    const pending = (s.runs || []).find((r) =>
+      ["accepted", "generating", "draft"].includes(r.status),
+    );
+    if (!state.active && pending) {
+      if (!$("messageInput").value) $("messageInput").value = pending.userText;
+      watchRun(pending.token, {
+        worldId: id,
+        branchId: s.branch.id,
+        worldName: s.world.name,
+        input: pending.userText,
+        text: pending.draft || "",
+        mode: pending.mode,
+      });
+    }
+  } finally {
+    if (ticket === state.request) state.navigating = false;
+  }
+}
+async function refreshWorld() {
+  if (state.navigating) return;
+  if (state.snapshot)
+    await loadWorld(state.snapshot.world.id, state.snapshot.branch.id);
+}
+function createWorldDialog(cardId) {
+  const wrap = el("div");
+  wrap.append(
+    el(
+      "p",
+      "选择本地演示，或使用已导入的卡片创建独立世界。所有世界互相隔离。",
+      "dialog-note",
+    ),
+  );
+  const title = field("世界名称", "text", "");
+  const card = selectField(
+    "故事卡",
+    [["", "钟楼镇 · 本地演示"], ...state.cards.map((c) => [c.id, c.name])],
+    cardId || "",
+  );
+  const greeting = selectField("开场", [["0", "默认开场"]]);
+  function greetings() {
+    const c = state.cards.find((c) => c.id === card.input.value);
+    greeting.input.replaceChildren();
+    for (const [i, text] of [
+      "默认开场",
+      ...(c?.alternateGreetings || []).map(
+        (s, i) => `替代开场 ${i + 1} · ${s.slice(0, 40)}`,
+      ),
+    ].entries()) {
+      const o = el("option", text);
+      o.value = i;
+      greeting.input.append(o);
+    }
+  }
+  card.input.onchange = greetings;
+  greetings();
+  wrap.append(title.wrap, card.wrap, greeting.wrap);
+  const create = button(
+    "创建并进入",
+    () =>
+      guarded(async () => {
+        create.disabled = true;
+        try {
+          const s = await api("/api/worlds", {
+            name: title.input.value || undefined,
+            cardId: card.input.value || undefined,
+            greetingIndex: Number(greeting.input.value),
+          });
+          $("dialog").close();
+          await refreshLists();
+          await loadWorld(s.world.id, s.branch.id);
+          announce("世界已创建。你可以开始交谈，或查看作者视图中的人物日程。");
+        } finally {
+          create.disabled = false;
+        }
+      }),
+    "primary",
+  );
+  showDialog("创建你的世界", wrap, [
+    button("取消", () => $("dialog").close()),
+    create,
+  ]);
+}
+$("newWorld").onclick = () => createWorldDialog();
+$("createDemo").onclick = () =>
+  guarded(async () => {
+    const b = $("createDemo");
+    b.disabled = true;
+    try {
+      const s = await api("/api/worlds", { name: "钟楼镇 · 我的故事" });
+      await refreshLists();
+      await loadWorld(s.world.id, s.branch.id);
+    } finally {
+      b.disabled = false;
+    }
+  });
+$("importButton").onclick = () => $("fileInput").click();
+$("fileInput").onchange = () =>
+  guarded(async () => {
+    const file = $("fileInput").files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024)
+      throw new Error("浏览器导入上限20 MiB，请先缩小资源包");
+    $("importButton").disabled = true;
+    try {
+      announce("正在校验角色卡与本地素材…");
+      const base64 = await new Promise((yes, no) => {
+        const reader = new FileReader();
+        reader.onload = () => yes(String(reader.result).split(",")[1]);
+        reader.onerror = () => no(new Error("无法读取文件"));
+        reader.readAsDataURL(file);
+      });
+      const result = await api("/api/import", { filename: file.name, base64 });
+      await refreshLists();
+      const wrap = el("div");
+      wrap.append(
+        el(
+          "p",
+          "原件与未知字段已保留。不受支持的脚本不会自动执行。",
+          "dialog-note",
+        ),
+      );
+      for (const r of result.report) {
+        const row = el("div", undefined, "report-item");
+        row.append(
+          el(
+            "strong",
+            {
+              mapped: "已映射",
+              preserved: "已保留",
+              unsupported: "不支持",
+              blocked: "已阻止",
+              missing: "缺失",
+            }[r.status] || r.status,
+          ),
+          el("div", r.field),
+          el("div", r.message),
+        );
+        wrap.append(row);
+      }
+      showDialog("导入完成 · " + result.card.name, wrap, [
+        button("关闭", () => $("dialog").close()),
+        button(
+          "用此卡创建世界",
+          () => {
+            $("dialog").close();
+            createWorldDialog(result.card.id);
+          },
+          "primary",
+        ),
+      ]);
+      announce("导入完成，请查看逐项迁移报告。");
+    } finally {
+      $("importButton").disabled = false;
+      $("fileInput").value = "";
+    }
+  });
+function sceneCard(scene, index) {
+  const article = el("article", undefined, "scene");
+  article.dataset.sceneId = scene.id;
+  const label = el("div", undefined, "scene-label");
+  label.append(
+    el(
+      "span",
+      `${String(index + 1).padStart(2, "0")}  ·  ${scene.source === "demo" ? "本地演示" : scene.source === "openai" ? "模型续写" : scene.source === "schedule" ? "世界事件" : "正式提交"}${scene.inherited ? " · 继承场景" : ""}  ·  ${scene.id.slice(0, 8)}`,
+    ),
+  );
+  const tools = el("span");
+  tools.append(button("从这里分支", () => forkDialog(scene.id)));
+  if (state.author) tools.append(button("改写此段", () => reviseDialog(scene)));
+  label.append(tools);
+  article.append(label);
+  if (scene.userText) article.append(el("div", scene.userText, "user-line"));
+  article.append(el("div", scene.displayNarrative ?? scene.narrative, "prose"));
+  if (state.author && scene.operations?.length) {
+    const details = el("details");
+    details.append(
+      el("summary", `${scene.operations.length} 项状态变化`),
+      el("pre", JSON.stringify(scene.operations, null, 2), "dialog-code"),
+    );
+    article.append(details);
+  }
+  return article;
+}
+function renderWorld() {
+  const s = state.snapshot;
+  const ready = !!s;
+  $("welcome").hidden = ready;
+  $("worldView").hidden = !ready;
+  $("composer").hidden = !ready;
+  $("inspectorEmpty").hidden = ready;
+  $("inspectorBody").hidden = !ready;
+  if (!ready) return;
+  $("worldTitle").textContent = s.world.name;
+  $("worldDescription").textContent =
+    s.world.card.description?.slice(0, 200) || "";
+  $("worldTime").textContent = "世界时间 " + s.state.time;
+  $("authorNotice").hidden = !state.author;
+  $("authorAction").hidden = !state.author;
+  $("branchSelect").replaceChildren(
+    ...s.branches.map((b) => {
+      const o = el("option", b.name);
+      o.value = b.id;
+      return o;
+    }),
+  );
+  $("branchSelect").value = s.branch.id;
+  $("cardActions").replaceChildren(
+    ...(
+      s.world.card.actions ||
+      (Array.isArray(s.world.card.extensions?.story_runtime?.actions)
+        ? s.world.card.extensions.story_runtime.actions.map((a, index) => ({
+            index,
+            label: a?.label || "卡片动作",
+          }))
+        : []) ||
+      []
+    ).map((a) => {
+      const b = button(a.label, () =>
+        guarded(async () => {
+          b.disabled = true;
+          try {
+            await api("/api/worlds/" + s.world.id + "/card-action", {
+              branchId: s.branch.id,
+              actionIndex: a.index,
+              runId: crypto.randomUUID(),
+              expectedHead: s.branch.head,
+            });
+            await refreshWorld();
+            announce("卡片动作已提交。");
+          } finally {
+            b.disabled = false;
+          }
+        }),
+      );
+      return b;
+    }),
+  );
+  $("sceneList").replaceChildren(...s.scenes.map(sceneCard));
+  if (!s.scenes.length) {
+    const open = el("article", undefined, "scene");
+    open.append(
+      el("div", "导入开场 · 设定素材，不自动触发物品或世界变化", "scene-label"),
+      el(
+        "div",
+        s.world.card.openingPreview ??
+          s.world.card.firstMessage ??
+          "这个世界还没有正式场景。写下第一句话吧。",
+        "prose",
+      ),
+    );
+    $("sceneList").append(open);
+  }
+  $("projectionNotice").hidden = !s.projectionError;
+  if (s.projectionError) {
+    $("projectionNotice").replaceChildren(
+      el(
+        "span",
+        "世界已保存，但宿主投影待恢复：" + s.projectionError.message + " ",
+      ),
+      button("重试界面同步", () =>
+        guarded(async () => {
+          await api("/api/worlds/" + s.world.id + "/recover-projection", {
+            branchId: s.branch.id,
+          });
+          await refreshWorld();
+        }),
+      ),
+    );
+  }
+  $("advanceTime").min = s.state.time;
+  $("advanceTime").value = s.state.time + 1;
+  renderInspector();
+  renderRuns();
+  renderActive();
+  clearTimeout(state.refreshTimer);
+  if (
+    s.autonomy?.enabled ||
+    (s.outbox.some((x) => x.status === "pending") && !s.projectionError)
+  )
+    state.refreshTimer = setTimeout(() => guarded(refreshWorld), 1200);
+}
+function renderActive() {
+  const a = state.active;
+  $("runBar").hidden = !a;
+  if (a)
+    $("runBarText").textContent =
+      a.phase === "projecting"
+        ? "世界已保存，正在同步宿主视图，无需重新生成"
+        : "正在继续「" + a.worldName + "」 · 草稿尚未提交";
+  $("globalCancel").disabled = a?.phase === "projecting";
+  $("sendButton").disabled = !!a || state.sending;
+  $("modelMode").disabled = !!a;
+  const here =
+    a &&
+    state.snapshot?.world.id === a.worldId &&
+    state.snapshot?.branch.id === a.branchId;
+  $("draftCard").hidden = !here;
+  if (here) $("draftText").textContent = a.text || "正在等待正文…";
+}
+function renderRuns() {
+  if (state.viewPending) {
+    $("runHistory").replaceChildren();
+    return;
+  }
+  const runs = (state.snapshot?.runs || []).filter((r) =>
+    ["failed", "cancelled", "interrupted", "draft"].includes(r.status),
+  );
+  $("runHistory").replaceChildren(
+    ...runs.slice(0, 8).map((r) => {
+      const d = el("details");
+      d.append(
+        el(
+          "summary",
+          {
+            failed: "生成/结算未完成",
+            cancelled: "已取消",
+            interrupted: "重启后已暂停",
+            draft: "未提交草稿",
+          }[r.status] +
+            " · " +
+            new Date(r.updatedAt).toLocaleTimeString(),
+        ),
+        el("p", r.error?.message || "这次草稿没有改变世界。"),
+      );
+      if (r.draft) d.append(el("pre", r.draft));
+      if (r.canRetrySettlement)
+        d.append(
+          button("仅重试结算 · 不调用模型", () =>
+            guarded(async () => {
+              const a = await api("/api/runs/" + r.token + "/retry", {});
+              watchRun(a.runId, {
+                worldId: state.snapshot.world.id,
+                branchId: state.snapshot.branch.id,
+                worldName: state.snapshot.world.name,
+                text: r.draft,
+              });
+            }),
+          ),
+        );
+      return d;
+    }),
+  );
+}
+function row(title, detail, extra) {
+  const n = el("div", undefined, "state-item");
+  n.append(el("strong", title));
+  if (detail !== undefined) n.append(el("p", detail));
+  if (extra) n.append(el("small", extra));
+  return n;
+}
+function renderInspector() {
+  if (state.viewPending) {
+    $("inspectorContent").replaceChildren(
+      el("p", "正在切换信息视图…", "empty"),
+    );
+    return;
+  }
+  const s = state.snapshot;
+  if (!s) return;
+  const root = $("inspectorContent"),
+    nodes = [];
+  const heading = (x) => nodes.push(el("h3", x, "subheading"));
+  const empty = (x) => nodes.push(el("p", x, "empty"));
+  const add = (list) => nodes.push(...list);
+  if (state.tab === "people") {
+    add(
+      s.state.characters.map((c) => {
+        const n = row(
+          c.name + (c.kind && c.kind !== "character" ? " · " + c.kind : ""),
+          "位置：" + (c.location ?? "尚未知晓"),
+          c.id,
+        );
+        if (state.author && (c.kind ?? "character") === "character")
+          n.append(
+            button("查看此人物认知", () => guarded(() => actorDialog(c))),
+          );
+        return n;
+      }),
+    );
+    heading("玩家认知");
+    add(
+      s.state.beliefs.map((b) =>
+        row(
+          name(b.subjectId) + " · " + b.key,
+          String(b.value),
+          "认知持有者：" + name(b.holderId),
+        ),
+      ),
+    );
+    if (!s.state.beliefs.length)
+      empty("认知与世界事实分开；人物不会自动全知。");
+  }
+  if (state.tab === "relations") {
+    add(
+      s.state.relations.map((r) => {
+        const n = row(
+          name(r.from) + " → " + name(r.to),
+          r.type +
+            (r.detail ? " · " + r.detail : "") +
+            (r.status === "ended" ? " · 已终止" : ""),
+          r.sourceCommitId ? "来源 " + r.sourceCommitId.slice(0, 8) : "",
+        );
+        if (r.sourceCommitId)
+          n.append(
+            button("查看来源", () =>
+              document
+                .querySelector(
+                  `[data-scene-id="${CSS.escape(r.sourceCommitId)}"]`,
+                )
+                ?.scrollIntoView({ behavior: "smooth" }),
+            ),
+          );
+        if (state.author) {
+          n.append(button("编辑关系", () => relationDialog(r)));
+          if (r.status !== "ended")
+            n.append(
+              button("终止关系", () =>
+                submitAction(
+                  [{ op: "end_relation", id: r.id }],
+                  "作者终止了一项关系，历史保留。",
+                ),
+              ),
+            );
+        }
+        return n;
+      }),
+    );
+    if (!s.state.relations.length)
+      empty("关系会随正式事件变化。作者可以建立多值、有方向的关系。");
+  }
+  if (state.tab === "world") {
+    heading("事实与来源");
+    add(
+      s.state.facts.map((f) => {
+        const n = row(
+          f.key,
+          (typeof f.value === "string" ? f.value : JSON.stringify(f.value)) +
+            (f.locked ? " · 已锁定" : ""),
+        );
+        if (f.sourceCommitId)
+          n.append(
+            button("查看来源", () =>
+              document
+                .querySelector(
+                  `[data-scene-id="${CSS.escape(f.sourceCommitId)}"]`,
+                )
+                ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+            ),
+          );
+        return n;
+      }),
+    );
+    if (!s.state.facts.length) empty("尚无当前可见事实。");
+    heading("物品");
+    add(
+      s.state.inventory.map((i) =>
+        row(i.item + " × " + i.quantity, name(i.entityId)),
+      ),
+    );
+    heading("变量");
+    add(Object.entries(s.state.variables).map(([k, v]) => row(k, String(v))));
+    heading("伏笔");
+    add(
+      s.state.plotThreads.map((p) => {
+        const n = row(p.label, p.status);
+        if (state.author)
+          for (const [status, label] of [
+            ["planted", "标为已埋"],
+            ["partially_resolved", "部分回收"],
+            ["resolved", "完成回收"],
+          ])
+            if (p.status !== status)
+              n.append(
+                button(label, () =>
+                  submitAction(
+                    [
+                      {
+                        op: "set_plot_thread",
+                        id: p.id,
+                        label: p.label,
+                        status,
+                      },
+                    ],
+                    "作者确认了线索状态与来源。",
+                  ),
+                ),
+              );
+        return n;
+      }),
+    );
+  }
+  if (state.tab === "plans") {
+    heading("目标");
+    add(
+      s.state.goals.map((g) => {
+        const n = row(name(g.entityId), g.text + " · " + g.status);
+        if (state.author && g.status !== "achieved")
+          n.append(
+            button("标为完成", () =>
+              submitAction(
+                [
+                  {
+                    op: "set_goal",
+                    id: g.id,
+                    entityId: g.entityId,
+                    text: g.text,
+                    status: "achieved",
+                  },
+                ],
+                "作者确认了目标完成。",
+              ),
+            ),
+          );
+        return n;
+      }),
+    );
+    heading("日程");
+    add(
+      s.state.schedules.map((q) => {
+        const n = row(
+          q.label,
+          "时间 " + q.at + " · " + name(q.entityId) + " · " + q.status,
+        );
+        if (state.author && q.status === "pending")
+          n.append(
+            button("取消日程", () =>
+              submitAction(
+                [{ op: "cancel_schedule", id: q.id }],
+                "作者取消了一项日程。",
+              ),
+            ),
+          );
+        return n;
+      }),
+    );
+    if (!state.author)
+      empty(
+        "幕后目标和NPC日程需主动切换作者视图查看。自主推进不会替玩家做重大决定。",
+      );
+  }
+  if (state.tab === "usage") {
+    const summary = s.usageSummary;
+    if (summary) {
+      heading("使用量与费用");
+      add([
+        row(
+          "模型尝试 " +
+            summary.modelAttempts +
+            " · 失败/取消 " +
+            summary.failedAttempts,
+          (summary.estimatedCost === null
+            ? "费用未知"
+            : `估算 ${summary.estimatedCost.toFixed(6)} ${summary.currency}`) +
+            " · " +
+            summary.usageCompleteness,
+          "手动价格估算，不是账单；缺usage不会当免费",
+        ),
+      ]);
+    }
+    if (s.contextDiagnostic) {
+      const d = s.contextDiagnostic;
+      heading("本地上下文诊断");
+      add([
+        row(
+          "请求字节 " + d.requestBytes,
+          "共同前缀 " +
+            (d.commonPrefixBytes ?? "尚无同作用域前次请求") +
+            " · 首个变化消息 " +
+            (d.firstChangedMessage ?? "未知"),
+          "仅本地字节相似度，不是供应商缓存命中率",
+        ),
+      ]);
+    }
+    heading("模型调用账本");
+    add(
+      s.usage
+        .slice(-20)
+        .reverse()
+        .map((u) =>
+          row(
+            u.mode === "demo"
+              ? "本地演示 · 非模型费用"
+              : "OpenAI-compatible 调用",
+            `输入 ${u.inputTokens ?? "未知"} · 缓存 ${u.cachedInputTokens ?? "未知"} · 输出 ${u.outputTokens ?? "未知"}`,
+            u.status,
+          ),
+        ),
+    );
+    if (!s.usage.length)
+      empty("没有模型尝试。世界日程由确定性规则推进时不产生API调用。");
+    heading("提交后通知");
+    add(
+      (s.notices || [])
+        .slice(-10)
+        .reverse()
+        .map((n) => row(n.text, "来源 " + n.commitId)),
+    );
+    heading("持久投影");
+    add([
+      row(
+        "已同步 " +
+          s.outbox.filter((o) => o.status === "delivered").length +
+          " / " +
+          s.outbox.length,
+        "正文、状态与outbox共同保存；宿主同步失败不会重新生成。",
+      ),
+    ]);
+  }
+  root.replaceChildren(...nodes);
+  for (const b of document.querySelectorAll("[data-tab]"))
+    b.setAttribute("aria-selected", String(b.dataset.tab === state.tab));
+  const a = s.autonomy || {};
+  $("autoButton").textContent = a.enabled ? "暂停自主推进" : "开启自主推进";
+  $("autoStatus").textContent =
+    a.lastError?.message ||
+    (a.enabled
+      ? `运行中 · 剩余 ${a.remainingEvents} 个事件 · 到时停止`
+      : "默认关闭；重启后暂停，空日程不调用模型");
+}
+for (const b of document.querySelectorAll("[data-tab]"))
+  b.onclick = () => {
+    state.tab = b.dataset.tab;
+    renderInspector();
+  };
+$("authorToggle").onchange = () =>
+  guarded(async () => {
+    state.author = $("authorToggle").checked;
+    if ($("dialog").open) $("dialog").close();
+    $("dialogBody").replaceChildren();
+    $("dialogActions").replaceChildren();
+    $("dialogTitle").textContent = "";
+    state.viewPending = true;
+    $("inspectorContent").replaceChildren(
+      el("p", "正在切换信息视图…", "empty"),
+    );
+    $("sceneList").replaceChildren();
+    $("runHistory").replaceChildren();
+    $("authorNotice").hidden = true;
+    $("authorAction").hidden = true;
+    const s = state.snapshot;
+    if (s) await loadWorld(s.world.id, s.branch.id);
+  });
+$("refreshWorld").onclick = () => guarded(refreshWorld);
+$("branchSelect").onchange = () =>
+  guarded(async () => {
+    clearTimeout(state.refreshTimer);
+    const intent = ++state.request;
+    const s = state.snapshot,
+      b = $("branchSelect").value;
+    await api("/api/worlds/" + s.world.id + "/select-branch", { branchId: b });
+    if (intent !== state.request) return;
+    await loadWorld(s.world.id, b);
+  });
+function forkDialog(commitId) {
+  const s = state.snapshot,
+    wrap = el("div"),
+    f = field("新分支名称", "text", "另一条路");
+  wrap.append(
+    el(
+      "p",
+      "新分支只继承到选定提交。原分支与后续剧情会完整保留。",
+      "dialog-note",
+    ),
+    f.wrap,
+  );
+  showDialog("开启另一条时间线", wrap, [
+    button("取消", () => $("dialog").close()),
+    button(
+      "创建分支",
+      () =>
+        guarded(async () => {
+          const next = await api("/api/worlds/" + s.world.id + "/fork", {
+            branchId: s.branch.id,
+            commitId,
+            name: f.input.value || "另一条路",
+          });
+          $("dialog").close();
+          await loadWorld(next.world.id, next.branch.id);
+          await refreshLists();
+        }),
+      "primary",
+    ),
+  ]);
+}
+$("forkCurrent").onclick = () =>
+  forkDialog(state.snapshot?.branch.head ?? null);
+function reviseDialog(scene) {
+  const s = state.snapshot,
+    wrap = el("div"),
+    text = field("修订后的正文", "textarea", scene.narrative),
+    publicText = field(
+      "玩家可见修订（留空则仅作者记录）",
+      "textarea",
+      scene.publicNarrative ??
+        (scene.audience === "public" ? scene.narrative : ""),
+    );
+  wrap.append(
+    el(
+      "p",
+      "会在这段正文之前创建新分支。旧后续事实、日程和剧情不会继承；原分支保留。新状态变化请另用作者操作明确提交，不会自动猜测。",
+      "dialog-note",
+    ),
+    text.wrap,
+    publicText.wrap,
+  );
+  showDialog("改写历史 · 保留原分支", wrap, [
+    button("取消", () => $("dialog").close()),
+    button(
+      "确认修订",
+      () =>
+        guarded(async () => {
+          const next = await api("/api/worlds/" + s.world.id + "/revise", {
+            branchId: s.branch.id,
+            commitId: scene.id,
+            narrative: text.input.value,
+            publicNarrative: publicText.input.value || undefined,
+            operations: [],
+          });
+          $("dialog").close();
+          await loadWorld(next.world.id, next.branch.id);
+          await refreshLists();
+        }),
+      "primary",
+    ),
+  ]);
+}
+function finishRun(message, error = false) {
+  const a = state.active;
+  if (!a) return;
+  a.stream.close();
+  state.active = null;
+  if ($("modelMode").value === "openai" && !state.config?.openaiConfigured) {
+    $("modelMode").value = "demo";
+    $("modelMode").onchange();
+  }
+  renderActive();
+  if (message) announce(message, error);
+  guarded(async () => {
+    await refreshLists();
+    await refreshWorld();
+  });
+}
+function watchRun(token, data) {
+  if (["demo", "openai"].includes(data.mode)) {
+    $("modelMode").value = data.mode;
+    $("modelMode").onchange();
+  }
+  if (state.active) state.active.stream.close();
+  const a = {
+    ...data,
+    token,
+    text: data.text || "",
+    stream: new EventSource("/api/runs/" + token + "/events"),
+  };
+  state.active = a;
+  renderActive();
+  a.stream.addEventListener("status", (e) => {
+    a.phase = JSON.parse(e.data).status;
+    renderActive();
+  });
+  a.stream.addEventListener("delta", (e) => {
+    a.text += JSON.parse(e.data).text;
+    renderActive();
+  });
+  a.stream.addEventListener("draft", (e) => {
+    a.text = JSON.parse(e.data).text;
+    renderActive();
+  });
+  a.stream.addEventListener("committed", (e) => {
+    if (state.active !== a) return;
+    const result = JSON.parse(e.data);
+    if ($("messageInput").value === a.input) $("messageInput").value = "";
+    finishRun(
+      result.projectionPending
+        ? "世界已保存，宿主同步仍在恢复。"
+        : result.postCommitNotice || "正文与世界变化已保存。",
+    );
+  });
+  a.stream.addEventListener("cancelled", () => {
+    if (state.active === a) finishRun("已取消，未提交草稿不会改变世界。");
+  });
+  a.stream.addEventListener("error", (e) => {
+    if (state.active !== a) return;
+    if (e.data) {
+      finishRun(JSON.parse(e.data).message, true);
+    } else {
+      announce("连接中断，正在自动读取持久运行状态；请勿重复发送。", true);
+    }
+  });
+}
+$("composer").onsubmit = (e) => {
+  e.preventDefault();
+  guarded(async () => {
+    if (state.active || state.sending) return;
+    state.sending = true;
+    const s = state.snapshot,
+      message = $("messageInput").value.trim();
+    if (!s || !message) {
+      state.sending = false;
+      return;
+    }
+    $("sendButton").disabled = true;
+    try {
+      const result = await api("/api/worlds/" + s.world.id + "/turn", {
+        branchId: s.branch.id,
+        message,
+        mode: $("modelMode").value,
+        runId: crypto.randomUUID(),
+      });
+      watchRun(result.runId, {
+        worldId: s.world.id,
+        branchId: s.branch.id,
+        worldName: s.world.name,
+        input: $("messageInput").value,
+      });
+    } finally {
+      state.sending = false;
+      renderActive();
+    }
+  });
+};
+$("globalCancel").onclick = () =>
+  guarded(async () => {
+    if (state.active)
+      await api("/api/runs/" + state.active.token + "/cancel", {});
+  });
+$("modelMode").onchange = () => {
+  $("modelHint").textContent =
+    $("modelMode").value === "demo"
+      ? "演示回应由本地示例生成器产生，不是真实AI"
+      : "将调用你配置的模型服务，可能产生费用；缺失usage显示未知";
+};
+async function submitAction(operations, narrative, publicNarrative) {
+  return guarded(async () => {
+    const s = state.snapshot;
+    await api("/api/worlds/" + s.world.id + "/actions", {
+      branchId: s.branch.id,
+      runId: crypto.randomUUID(),
+      expectedHead: s.branch.head,
+      narrative,
+      publicNarrative,
+      operations,
+    });
+    $("dialog").close();
+    await refreshWorld();
+    announce("作者操作已正式提交。");
+  });
+}
+function actionDialog() {
+  const s = state.snapshot,
+    wrap = el("div");
+  wrap.append(
+    el(
+      "p",
+      "只支持明确的世界变化。预览不会改变状态；任意JavaScript、Shell或网络脚本均不会运行。",
+      "dialog-note",
+    ),
+  );
+  const kind = selectField("操作类型", [
+    ["create_entity", "新增人物或实体"],
+    ["update_entity", "编辑人物或实体"],
+    ["set_reference", "导入或编辑大纲资料"],
+    ["mark_chapter", "开始新章节"],
+    ["set_location", "改变位置"],
+    ["change_inventory", "增减物品"],
+    ["set_variable", "设置变量"],
+    ["add_relation", "建立关系"],
+    ["set_fact", "记下事实"],
+    ["set_goal", "设置目标"],
+    ["schedule", "安排NPC行动"],
+    ["set_belief", "记录人物认知"],
+    ["set_plot_thread", "管理伏笔"],
+    ["advanced", "高级：声明式JSON"],
+  ]);
+  wrap.append(kind.wrap);
+  const fields = el("div"),
+    preview = el("pre", "点击“预览”检查待提交变化", "dialog-code"),
+    narrative = field("事件说明", "text", "作者确认了一项世界变化。"),
+    publicText = field("玩家可见叙事（留空则仅作者记录）", "textarea", "");
+  wrap.append(
+    fields,
+    narrative.wrap,
+    el(
+      "p",
+      "事件说明仅作者可见。需要让玩家知道时，请另写下方叙事，不会自动发布审计说明。",
+      "dialog-note",
+    ),
+    publicText.wrap,
+    preview,
+  );
+  let read;
+  const entities = s.state.characters.map((c) => [c.id, c.name + " · " + c.id]);
+  function build() {
+    fields.replaceChildren();
+    const list = [];
+    const f = (label, type = "text", value = "") => {
+      const x = field(label, type, value);
+      list.push(x.wrap);
+      return x.input;
+    };
+    const pick = (label, options, value) => {
+      const x = selectField(label, options, value);
+      list.push(x.wrap);
+      return x.input;
+    };
+    const entity = () => pick("人物", entities, "card-main");
+    const scalar = (x) => {
+      try {
+        return JSON.parse(x);
+      } catch {
+        return x;
+      }
+    };
+    if (kind.input.value === "create_entity") {
+      const title = f("实体名称"),
+        type = pick("实体种类", [
+          ["character", "人物"],
+          ["organization", "组织"],
+          ["location", "地点"],
+          ["item", "物品"],
+        ]),
+        aliases = f("别名（逗号分隔）"),
+        description = f("实体描述", "textarea");
+      read = () => [
+        {
+          op: "create_entity",
+          name: title.value,
+          kind: type.value,
+          aliases: aliases.value
+            .split(",")
+            .map((x) => x.trim())
+            .filter(Boolean),
+          description: description.value,
+        },
+      ];
+    }
+    if (kind.input.value === "update_entity") {
+      const who = pick("编辑实体", entities),
+        title = f("新名称"),
+        aliases = f("别名（逗号分隔）"),
+        description = f("实体描述", "textarea"),
+        privacy = pick("描述可见性", [
+          ["public", "公开"],
+          ["private", "仅自身和作者"],
+        ]),
+        locked = pick("锁定实体", [
+          ["false", "未锁定"],
+          ["true", "锁定"],
+        ]);
+      const fill = () => {
+        const c = s.state.characters.find((c) => c.id === who.value);
+        title.value = c.name;
+        aliases.value = (c.aliases || []).join(",");
+        description.value = c.description || "";
+        privacy.value = c.descriptionVisibility || "public";
+        locked.value = String(!!c.locked);
+      };
+      who.onchange = fill;
+      fill();
+      read = () => [
+        {
+          op: "update_entity",
+          id: who.value,
+          name: title.value,
+          aliases: aliases.value
+            .split(",")
+            .map((x) => x.trim())
+            .filter(Boolean),
+          description: description.value,
+          descriptionVisibility: privacy.value,
+          locked: locked.value === "true",
+        },
+      ];
+    }
+    if (kind.input.value === "set_reference") {
+      const refs = s.state.references || [],
+        which = pick("参考资料", [
+          ["", "新增资料"],
+          ...refs.map((r) => [r.id, r.title]),
+        ]),
+        title = f("资料标题"),
+        text = f("资料正文（大纲不自动成为正史）", "textarea"),
+        privacy = pick("资料可见性", [
+          ["public", "公开参考"],
+          ["private", "仅玩家与作者"],
+          ["author", "仅作者，不进入任何人物上下文"],
+        ]);
+      which.onchange = () => {
+        const r = refs.find((r) => r.id === which.value);
+        title.value = r?.title || "";
+        text.value = r?.text || "";
+        privacy.value =
+          r?.visibility === "private" && r.holderId === null
+            ? "author"
+            : r?.visibility || "public";
+      };
+      read = () => [
+        {
+          op: "set_reference",
+          ...(which.value ? { id: which.value } : {}),
+          title: title.value,
+          text: text.value,
+          visibility: privacy.value === "author" ? "private" : privacy.value,
+          holderId: privacy.value === "author" ? null : "player",
+        },
+      ];
+    }
+    if (kind.input.value === "mark_chapter") {
+      const title = f("章节标题");
+      read = () => [{ op: "mark_chapter", title: title.value }];
+    }
+    if (kind.input.value === "set_location") {
+      const who = entity(),
+        value = f("目的地");
+      read = () => [
+        { op: "set_location", entityId: who.value, value: value.value },
+      ];
+    }
+    if (kind.input.value === "change_inventory") {
+      const who = entity(),
+        item = f("物品名称"),
+        amount = f("数量变化（负数表示消耗）", "number", "1");
+      read = () => [
+        {
+          op: "change_inventory",
+          entityId: who.value,
+          item: item.value,
+          amount: Number(amount.value),
+        },
+      ];
+    }
+    if (kind.input.value === "set_variable") {
+      const key = f("变量名", "text", "trust"),
+        value = f("值（数字、布尔或文字）", "text", "1");
+      read = () => [
+        { op: "set_variable", key: key.value, value: scalar(value.value) },
+      ];
+    }
+    if (kind.input.value === "add_relation") {
+      const from = pick("关系起点", entities, "card-main"),
+        to = pick("关系终点", entities, "player"),
+        type = f("关系类型", "text", "friend_of"),
+        detail = f("关系说明");
+      read = () => [
+        {
+          op: "add_relation",
+          from: from.value,
+          to: to.value,
+          type: type.value,
+          detail: detail.value,
+        },
+      ];
+    }
+    if (kind.input.value === "set_fact") {
+      const key = f("事实名称"),
+        value = f("事实内容", "textarea"),
+        visibility = pick("可见性", [
+          ["public", "公开"],
+          ["private", "人物私有"],
+        ]),
+        holder = pick("私有事实持有者", entities, "card-main"),
+        locked = pick("锁定", [
+          ["false", "允许后续更新"],
+          ["true", "锁定，模型不可更改"],
+        ]);
+      read = () => [
+        {
+          op: "set_fact",
+          key: key.value,
+          value: value.value,
+          visibility: visibility.value,
+          holderId: holder.value,
+          locked: locked.value === "true",
+        },
+      ];
+    }
+    if (kind.input.value === "set_goal") {
+      const who = entity(),
+        text = f("目标", "textarea"),
+        visibility = pick("可见性", [
+          ["public", "公开"],
+          ["private", "私有"],
+        ]);
+      read = () => [
+        {
+          op: "set_goal",
+          entityId: who.value,
+          text: text.value,
+          status: "active",
+          visibility: visibility.value,
+        },
+      ];
+    }
+    if (kind.input.value === "schedule") {
+      const who = entity(),
+        label = f("事件说明"),
+        at = f("到期世界时间", "number", String(s.state.time + 5)),
+        location = f("届时前往的位置");
+      read = () => [
+        {
+          op: "schedule",
+          entityId: who.value,
+          label: label.value,
+          at: Number(at.value),
+          operations: [
+            { op: "set_location", entityId: who.value, value: location.value },
+          ],
+        },
+      ];
+    }
+    if (kind.input.value === "set_belief") {
+      const holder = pick("认知持有者", entities, "player"),
+        subject = pick("认知对象", entities, "card-main"),
+        key = f("认知字段", "text", "location"),
+        value = f("认知内容");
+      read = () => [
+        {
+          op: "set_belief",
+          holderId: holder.value,
+          subjectId: subject.value,
+          key: key.value,
+          value: value.value,
+        },
+      ];
+    }
+    if (kind.input.value === "set_plot_thread") {
+      const label = f("线索"),
+        status = pick("状态", [
+          ["planned", "计划（仅作者）"],
+          ["planted", "已埋设"],
+          ["partially_resolved", "部分回收"],
+          ["resolved", "已回收"],
+          ["abandoned", "废弃"],
+        ]);
+      read = () => [
+        { op: "set_plot_thread", label: label.value, status: status.value },
+      ];
+    }
+    if (kind.input.value === "advanced") {
+      const text = f(
+        "operations 数组（纯数据，不执行代码）",
+        "textarea",
+        '[{"op":"set_variable","key":"trust","value":1}]',
+      );
+      read = () => {
+        const x = JSON.parse(text.value);
+        if (!Array.isArray(x)) throw new Error("需要JSON数组");
+        return x;
+      };
+    }
+    fields.append(...list);
+  }
+  kind.input.onchange = build;
+  build();
+  showDialog("作者操作 · 共同提交", wrap, [
+    button("预览（不保存）", () =>
+      guarded(() => {
+        preview.textContent = JSON.stringify(read(), null, 2);
+      }),
+    ),
+    button(
+      "提交世界变化",
+      () =>
+        guarded(() =>
+          submitAction(
+            read(),
+            narrative.input.value || "作者操作",
+            publicText.input.value || undefined,
+          ),
+        ),
+      "primary",
+    ),
+  ]);
+}
+$("authorAction").onclick = actionDialog;
+$("advanceButton").onclick = () =>
+  guarded(async () => {
+    const s = state.snapshot;
+    const r = await api("/api/worlds/" + s.world.id + "/advance", {
+      branchId: s.branch.id,
+      to: Number($("advanceTime").value),
+      maxEvents: 10,
+    });
+    await refreshWorld();
+    announce(
+      `推进完成：${r.executed.length} 项行动，${r.cancelled.length} 项条件失效。`,
+    );
+  });
+$("autoButton").onclick = () =>
+  guarded(async () => {
+    const s = state.snapshot;
+    await api("/api/worlds/" + s.world.id + "/autonomy", {
+      branchId: s.branch.id,
+      enabled: !s.autonomy?.enabled,
+      maxEvents: Number($("autoBudget").value),
+      durationSeconds: Number($("autoDuration").value),
+    });
+    await refreshWorld();
+  });
+$("exportButton").onclick = () => {
+  const s = state.snapshot;
+  window.location.assign(
+    "/api/worlds/" +
+      s.world.id +
+      "/export?branchId=" +
+      encodeURIComponent(s.branch.id),
+  );
+};
+$("backupButton").onclick = () => window.location.assign("/api/backup");
+$("helpButton").onclick = () => {
+  const wrap = el("div");
+  for (const text of [
+    "演示模式使用真实数据库、分支、导入、日程与宿主持久投影，但回应是确定性样例，不是真实AI。",
+    "真实模型：启动前设置STORY_OPENAI_BASE_URL、STORY_OPENAI_MODEL和可选STORY_OPENAI_API_KEY，然后在输入框上方选择真实模型。密钥只在服务端环境，不写存档或备份。",
+    "作者视图可看到幕后真相与计划；玩家不会自动知道其他人物的新位置。可以用“记录人物认知”显式设置已观察的信息。",
+    "备份下载为带SHA256清单的JSON文件。恢复只允许全新目录，不覆盖现有进度。",
+  ])
+    wrap.append(el("p", text, "dialog-note"));
+  wrap.append(
+    el(
+      "pre",
+      "node world-runtime/cli.mjs restore BACKUP.story-backup.json --data-dir /new/directory\nnode world-runtime/cli.mjs serve --data-dir /new/directory",
+      "dialog-code",
+    ),
+  );
+  showDialog("使用与恢复", wrap, [
+    button("知道了", () => $("dialog").close(), "primary"),
+  ]);
+};
+window.addEventListener("beforeunload", () => {
+  state.active?.stream.close();
+  clearTimeout(state.refreshTimer);
+});
+guarded(async () => {
+  state.config = await api("/api/config");
+  $("connection").textContent = "本地世界已就绪";
+  const real = $("modelMode").querySelector("option[value=openai]");
+  real.disabled = !state.config.openaiConfigured;
+  real.textContent = state.config.openaiConfigured
+    ? "真实模型 · " + state.config.model
+    : "真实模型 · 未配置";
+  await refreshLists();
+  if (state.worlds.length) {
+    let chosen;
+    try {
+      chosen = JSON.parse(localStorage.getItem("story-runtime-selection"));
+    } catch {}
+    const world =
+      state.worlds.find((w) => w.id === chosen?.worldId) || state.worlds[0];
+    try {
+      await loadWorld(
+        world.id,
+        world.id === chosen?.worldId ? chosen.branchId : undefined,
+      );
+    } catch {
+      await loadWorld(world.id);
+    }
+  }
 });
 
-function relationDialog(r){const wrap=el('div'),type=field('关系类型','text',r.type),detail=field('关系说明','textarea',r.detail||''),from=field('起点对终点的称呼','text',r.addressFrom||''),to=field('终点对起点的称呼','text',r.addressTo||''),locked=selectField('锁定关系',[['false','允许更新'],['true','锁定，仅作者可改']],String(!!r.locked));wrap.append(type.wrap,detail.wrap,from.wrap,to.wrap,locked.wrap);showDialog('编辑关系 · 保留历史证据',wrap,[button('取消',()=>$('dialog').close()),button('保存关系',()=>submitAction([{op:'update_relation',id:r.id,type:type.input.value,detail:detail.input.value,addressFrom:from.input.value,addressTo:to.input.value,locked:locked.input.value==='true'}],'作者修订了一项有向关系。'),'primary')]);}
-async function actorDialog(c){const s=state.snapshot,ticket=state.request;const query=new URLSearchParams({branchId:s.branch.id,view:'author',actorId:c.id});const a=await api('/api/worlds/'+s.world.id+'/actor-view?'+query);if(ticket!==state.request||!state.author)return;const wrap=el('div');wrap.append(el('p','这份视图只显示此人物已知信息。缺少观察证据时不会复制玩家全部对话。','dialog-note'));for(const b of a.state.beliefs)wrap.append(row(name(b.subjectId)+' · '+b.key,String(b.value),'来源 '+(b.sourceCommitId||'初始设定')));for(const x of a.state.characters)wrap.append(row(x.name,'认知位置：'+(x.location??'未知')));showDialog(c.name+' · 人物认知',wrap,[button('关闭',()=>$('dialog').close(),'primary')]);}
+$("knowledgeButton").onclick = () =>
+  guarded(async () => {
+    const s = state.snapshot,
+      author = state.author,
+      ticket = state.request;
+    const query = new URLSearchParams({
+        branchId: s.branch.id,
+        view: author ? "author" : "player",
+      }),
+      base = "/api/worlds/" + s.world.id;
+    const data = await api(base + "/chapters?" + query);
+    if (ticket !== state.request || author !== state.author) return;
+    const wrap = el("div"),
+      search = field("查找人物、事实或原文"),
+      results = el("div");
+    wrap.append(
+      el(
+        "p",
+        (author ? "作者资料含隐藏信息。" : "玩家资料仅含当前可见信息。") +
+          "章节摘录从当前分支原文重建，修订后不继承被撤销的未来。",
+        "dialog-note",
+      ),
+      search.wrap,
+      button("查询", () =>
+        guarded(async () => {
+          const q = new URLSearchParams(query);
+          q.set("q", search.input.value);
+          const found = await api(base + "/knowledge-search?" + q);
+          if (ticket !== state.request || author !== state.author) {
+            $("dialog").close();
+            return;
+          }
+          results.replaceChildren(
+            ...found.results.map((r) =>
+              row(
+                r.kind + " · " + r.id,
+                r.text,
+                r.sourceCommitId ? "来源 " + r.sourceCommitId : "",
+              ),
+            ),
+          );
+        }),
+      ),
+      results,
+    );
+    for (const chapter of data.chapters) {
+      const section = el("section");
+      section.append(el("h3", chapter.title));
+      for (const excerpt of chapter.excerpts)
+        section.append(
+          row(
+            excerpt.text + (excerpt.truncated ? "…" : ""),
+            "原文摘录",
+            excerpt.sourceCommitId,
+          ),
+        );
+      wrap.append(section);
+    }
+    showDialog("知识、章节与来源", wrap, [
+      button("导出当前视图知识包", () =>
+        window.location.assign(base + "/knowledge?" + query),
+      ),
+      button("关闭", () => $("dialog").close(), "primary"),
+    ]);
+  });
+
+function relationDialog(r) {
+  const wrap = el("div"),
+    type = field("关系类型", "text", r.type),
+    detail = field("关系说明", "textarea", r.detail || ""),
+    from = field("起点对终点的称呼", "text", r.addressFrom || ""),
+    to = field("终点对起点的称呼", "text", r.addressTo || ""),
+    locked = selectField(
+      "锁定关系",
+      [
+        ["false", "允许更新"],
+        ["true", "锁定，仅作者可改"],
+      ],
+      String(!!r.locked),
+    );
+  wrap.append(type.wrap, detail.wrap, from.wrap, to.wrap, locked.wrap);
+  showDialog("编辑关系 · 保留历史证据", wrap, [
+    button("取消", () => $("dialog").close()),
+    button(
+      "保存关系",
+      () =>
+        submitAction(
+          [
+            {
+              op: "update_relation",
+              id: r.id,
+              type: type.input.value,
+              detail: detail.input.value,
+              addressFrom: from.input.value,
+              addressTo: to.input.value,
+              locked: locked.input.value === "true",
+            },
+          ],
+          "作者修订了一项有向关系。",
+        ),
+      "primary",
+    ),
+  ]);
+}
+async function actorDialog(c) {
+  const s = state.snapshot,
+    ticket = state.request;
+  const query = new URLSearchParams({
+    branchId: s.branch.id,
+    view: "author",
+    actorId: c.id,
+  });
+  const a = await api("/api/worlds/" + s.world.id + "/actor-view?" + query);
+  if (ticket !== state.request || !state.author) return;
+  const wrap = el("div");
+  wrap.append(
+    el(
+      "p",
+      "这份视图只显示此人物已知信息。缺少观察证据时不会复制玩家全部对话。",
+      "dialog-note",
+    ),
+  );
+  for (const b of a.state.beliefs)
+    wrap.append(
+      row(
+        name(b.subjectId) + " · " + b.key,
+        String(b.value),
+        "来源 " + (b.sourceCommitId || "初始设定"),
+      ),
+    );
+  for (const x of a.state.characters)
+    wrap.append(row(x.name, "认知位置：" + (x.location ?? "未知")));
+  showDialog(c.name + " · 人物认知", wrap, [
+    button("关闭", () => $("dialog").close(), "primary"),
+  ]);
+}

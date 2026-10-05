@@ -61,3 +61,21 @@ Library原Linux包恢复；本轮重新安装锁定runtime及开发依赖，未�
 修复开发中实际发现：新normalizer必须保留v1备份重建语义且不静默启用旧卡规则；规则append/condition也须actor过滤；CLI跨平台文案变化导致crash test旧启动匹配失效，更新匹配并再次真实SIGKILL验证；场景变量只暂存，不持久写入；完整关系列表保留结束历史。
 
 严格保留未通过：Chromium两次启动（含一次获批提升）socket失败；无截图。Android原生桥缺、Windows/macOS未测、真实供应商未调用。GitHub仅按最终授权仓库发布；继承自动Pages/manifest已手动化；原版权保留。实际冻结测试/哈希在当前验证文件，旧FINAL报告只说明历史。
+
+## 2026-10-05 第二轮：合并聚焦/全量独审后修复
+
+基线91ae6c9322f7ef66be4200590234ff073be80faf的两组报告均保留，未改成通过。先写review-fixes/schema-migration及相关失败断言，再实现并回归：
+
+- F01：run元数据持久预留host实体ID；input→model引用→最终commit→草稿重开/幂等复用同一ID，外部操作仍不能填写任意ID
+- F02/M2：模型/知识/搜索保留关系ID、active/ended、有效期、称呼和来源；晚出场实体/相关关系优先进入预算
+- F03：普通位置/变量决策默认actor知识；明确作者world模式才可读世界合法性真相。到期再验证实际状态，不把认知等同现实
+- F05/M3：实体/关系/变量锁定使该日程带原因取消，其他合法日程继续；解锁后新安排可执行，不吞存储错误
+- M1：作者audit正文与明确publicNarrative分离，同事务audience；统一裁剪玩家DOM/模型/检索/章节/知识/TXT，旧作者场景默认隐藏；描述遵守actor投影，切回玩家清空作者dialog
+- F04：SQLite实际保存带来源/可见性/摘要版本/覆盖ID的checkpoint；早期可见来源按本轮查询召回，85场景、重启与fork撤回有回归。不是额外模型摘要或真实缓存收益证明
+- F06：所有commit路径存一次只读notice，SSE重连返回同一保存结果，不重新执行规则
+- 为使旧程序拒绝忽略audience的新数据，逻辑存档升级v2；valid v1先VACUUM INTO一致备份并flush，再事务更新版本。失败flush保留v1；未知未来格式不迁移。未声称硬件断电或Windows目录flush已验收
+- minor：新增只读Linux新核心CI；旧安装器/站点提示上游归属；知识Markdown转义；资料提供作者独享选项；合同统一v2；额外模型参数白名单/工具禁用声明
+
+对实际改动模块使用固定官方Prettier3.6.2格式化。行数增加主要是展开原一行式代码便于审查，不是新增框架或运行依赖。原ADR、LICENSE、来源声明不改。格式化后再跑真实回归；新测试记录见当前验证文件。
+
+仍未关闭原目标：Android原生桥、Win/mac实机、真实Chromium、全资源媒体体验/大导入取消与移动内存、真实模型质量费用。没有以scope改写消掉这些门，没有push/Issue/Release/Pages。

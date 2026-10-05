@@ -1,6 +1,6 @@
 {
   "kind": "jsdom + delayed real HTTP response; not Chromium",
-  "at": "2026-10-05T11:42:39.486Z",
+  "at": "2026-10-05T12:24:15.912Z",
   "observations": [
     {
       "stage": "late-author-response",

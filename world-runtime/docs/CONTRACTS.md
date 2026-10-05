@@ -1,70 +1,72 @@
-# Shared contracts v1 (single owner: integration coordinator)
+# World Runtime implementation contract v2
 
-Plain ESM JavaScript, Node24.19.0. No extra framework. All persistent world data in SQLite; assets immutable content-addressed files. Code lives `world-runtime/src`, tests `world-runtime/test`, web `world-runtime/public` inside existing fixed Tavern checkout.
+Updated 2026-10-05. This describes the actual candidate; it is not a claim of four-platform acceptance. Node >=24.19.0, plain ESM JavaScript, one authoritative SQLite database, immutable content-addressed assets, and a minimal pinned DSH Session/JSONL projection. Existing ADR files remain unchanged.
 
-## Core module src/store.mjs (storage worker)
-Export `WorldStore` with `constructor(dataDir)`, `close()` and following synchronous methods unless stated async. IDs generated internally via UUID, string. Safe exceptions `{code,message}`. No network/model inside store. Calls must require world/branch; unknown IDs reject.
-- `listWorlds()` -> `[{id,name,activeBranchId,createdAt,updatedAt}]`
-- `createWorld({name,card})` -> snapshot. card is normalized importer object, may be demo fallback. Save exact card in world metadata. Initialize primary character `card-main`, player `player`; optional `card.extensions.story_runtime.characters` synthetic extras. Do not turn card backstory into already-happened events.
-- `snapshot(worldId,branchId?)` -> `{world:{id,name,activeBranchId,card,createdAt},branch:{id,name,head,sourceRevision,parentBranchId,forkCommitId},state:{time,characters:[{id,name,description,location}],relations:[{id,from,to,type,detail,sourceCommitId}],facts:[{id,key,value,visibility,holderId,locked,sourceCommitId}],beliefs:[{holderId,subjectId,key,value,sourceCommitId}],goals:[{id,entityId,text,status,visibility}],inventory:[{entityId,item,quantity}],variables:{},schedules:[{id,at,entityId,label,operations,precondition,status}],plotThreads:[{id,label,status,sourceCommitId}]},scenes:[{id,branchId,seq,runId,userText,narrative,operations,source,createdAt,inherited}],branches:[{id,name,head}],outbox:[{commitId,status}],usage:[{runId,attemptId,mode,inputTokens,cachedInputTokens,outputTokens,status}]}`. Exact schema stable; initial empty arrays/objects. Scenes ordered full ancestor history through fork plus own. `sourceCommitId` auto server/store metadata, not model proof.
-- `commit({worldId,branchId,runId,expectedHead,sourceRevision,userText,narrative,operations,source='turn',usage=null,author=false})` -> `{commitId,seq,reused,snapshot}`. Atomically body+validated state+event provenance+outbox. Same run same payload stable; changed payload conflict even if head advanced. Reject stale head/source; lock override only trusted `author` boolean, not operation field. Empty operations allowed narrative, no fabricated state event. Immutable after-state per commit supports fork. Snapshot consistent read txn.
-- `markProjected(worldId,branchId,commitId)` -> delivered; trusted backend only, explicit scope.
-- `fork({worldId,branchId,commitId,name})` -> snapshot of NEW branch active; commitId null means genesis. Only from own/inherited reachable point; no sibling future.
-- `selectBranch(worldId,branchId)` -> snapshot.
-- `advance({worldId,branchId,to,maxEvents=10})` -> `{snapshot,executed,cancelled}`. Due schedules sorted time/id. Validate precondition against current state; invalidated events cancelled not forced. No model. At mostmaxEvents. Atomic event commits with deterministic schedule runID avoid duplicate. No schedule+no new time? may update time via explicit manual event only, but no fake NPC events.
-- `recordAttempt({...})` persist usage/errors separately, never count unknown tokens as zero. Source call attempts idempotent attemptId.
-- `backup(path)` async official SQLite online backup to NEW file, no overwrite.
+## Persistence and compatibility
 
-### Operations allowlist (single semantics, reject unknown fields/kinds)
-`{op:'set_location',entityId,value}`
-`{op:'add_relation',from,to,type,detail?}` (multivalue directed)
-`{op:'set_fact',id?,key,value,visibility?:'public'|'private',holderId?,locked?:boolean}`
-`{op:'set_belief',holderId,subjectId,key,value}`
-`{op:'set_goal',id?,entityId,text,status?:'active'|'paused'|'achieved'|'abandoned',visibility?}`
-`{op:'change_inventory',entityId,item,amount}` (safe integer, reject negative resulting quantity)
-`{op:'set_variable',key,value}` (bounded scalar string/number/boolean)
-`{op:'set_plot_thread',id?,label,status:'planned'|'planted'|'partially_resolved'|'resolved'|'abandoned'}`
-`{op:'schedule',id?,at,entityId,label,operations,precondition?}`; precondition restricted `{entityId,location}` or `{variable,equals}`. Scheduled operations cannot recursively schedule. At≥world time, stable internal ID.
-`{op:'cancel_schedule',id}`
-Do not accept arbitrary SQL, scripts, network/tool commands, cross-scope IDs or dangerous property keys.
+- Logical database version is 2. Table layout remains compatible with v1, but v2 requires audience/checkpoint/notice metadata to interpret new data safely. Old applications reject v2 instead of ignoring the privacy contract
+- Opening a valid v1 database first creates a consistent `world-v1-before-v2-<uuid>.sqlite` snapshot with SQLite VACUUM INTO and flushes it and its directory, then updates both version markers in one transaction. A flush failure leaves v1 intact. Unknown versions/schema variants reject without guessing; no hardware power-loss certification or Windows fsync support is claimed
+- Every world change validates `(worldId, branchId, expectedHead, sourceRevision)`. Same `(world,branch,run)` plus same payload returns the original receipt; different payload conflicts
+- Body, operations, after-state, events, outbox, audience metadata and read-only post-commit notice commit together. Models, previews and cancellation do not write canonical state. DSH is a recoverable projection, never a second authority
+- Run entity reservations are private metadata, generated by the host for accepted runs. Staged operations and final commit consume the same ordered IDs. Model/card operations cannot supply an entity ID in `create_entity`; drafts/retries/restart retain the reservation
+- `snapshot()` is an author-level storage API. HTTP and model access use the central actor projection; the UI does not assemble unrelated state versions
 
-## Import module src/importer.mjs (import worker)
-Export async `importCard({filename,bytes,dataDir})` -> `{card,report}` persisted card metadata under dataDir/cards and raw source+assets hashes. normalized card `{id,name,description,personality,scenario,firstMessage,alternateGreetings:[],exampleDialogue,systemPrompt,postHistoryInstructions,tags:[],creator,worldbook:[],assets:[{id,name,mime,path,sha256,size}],extensions:{},original:{name,sha256,path}}`. report `[{field,status:'mapped'|'preserved'|'unsupported'|'blocked'|'missing',message}]`. Helpers `listCards(dataDir)`, `readCard(dataDir,id)`, `assetPath(dataDir,assetId)` safe; export originals via path. Neither import nor rendering executes scripts or remote fetch. ST JSON/PNG metadata, Risu CharX resources/module preservation required; unsupported module behaviors accurately reported. Unknown fields preserved in original and extensions. Bound sizes, zip count/ratio/depth/path, reject symlinks/encrypted entries, HTML/SVG executable display blocked. Output only safe raster/audio assets served allowlisted mime. Child owns modules import*.mjs and test/import*.mjs, fixtures except demo-card.json owned parent.
+## Canonical operations
 
-## HTTP interface (server integrator owns)
-JSON responses unless SSE/export. Errors status4xx/5xx `{error:{code,message}}`; no credential echoes.
-GET /api/config -> `{demo:true,openaiConfigured,model,endpoint}` (no secrets)
-GET /api/cards -> `{cards}`; POST /api/import `{filename,base64}` -> `{card,report}`
-GET /api/worlds -> `{worlds}`; POST /api/worlds `{name,cardId?}` -> snapshot
-GET /api/worlds/:id?branchId=...&view=player|author -> filtered snapshot (`author` explicit toggle)
-POST /api/worlds/:id/turn `{branchId,message,runId,mode:'demo'|'openai'}` ->202 `{runId}`
-GET /api/runs/:runId/events ->SSE events `delta` data `{text}`, `committed` `{snapshot}`, `error` `{code,message}`, `cancelled` `{}`; initial/replayed run full current draft in `draft` `{text}`. EventSource closes on terminal. Run cancellation POST /api/runs/:runId/cancel `{}`. Same runID reuse cannot duplicate turn or overwrite different payload.
-POST /api/worlds/:id/actions `{branchId,runId,narrative,operations}` -> snapshot, explicit local author's declarative action; any accepted state change formalcommit.
-POST /api/worlds/:id/advance `{branchId,to,maxEvents}` -> `{snapshot,executed,cancelled}`
-POST /api/worlds/:id/fork `{branchId,commitId,name}` -> snapshot
-POST /api/worlds/:id/select-branch `{branchId}` -> snapshot
-POST /api/worlds/:id/autonomy `{branchId,enabled,maxEvents?,durationSeconds?}` -> `{enabled,...}`; default off, stops on budget/foreground, restart off, no silent catchup.
-GET /api/worlds/:id/export?branchId=... -> plain text/JSON readable story (player view default)
-GET /api/backup -> zip (consistent SQLite+immutable assets+manifest, no credentials/host raw log). Restore documented CLI to new data dir.
-GET /assets/:hash ->safe MIME immutable data content, no card filename path trust.
-GET /api/health -> `{ok:true,version}`.
+All shapes are strict allowlists in `src/domain-state.mjs`; unknown fields reject.
 
-## UI (web worker owns public only)
-Chinese polished responsive local story app, clearly new Linux WorldMode with demo/real model status. Real data only from API; no fake state in client. Left worlds/cards/import, center narrative composer with draft+cancel/commit states, right tabs characters/relations/facts/events/inventory/goals/schedules/usage. Explicit author toggle, branch selection/fork from scene, backup/export, bounded autonomy/pause, manual world time advance. Can configure declarative actions via form/buttons, no eval/rawHTML. Demo startup is explicit create sample world button, zero credentials. Display migration report/resources/import failure. Bind once avoid duplicate submits, create stable per-send run UUID, preserve user's input/draft on errors, no stale branch update after navigation. UI can poll snapshots on autonomy interval only while active; stop on page close/nav.
+| Family | Operations and contract |
+|---|---|
+| Entities | create_entity(name,kind,aliases?,description?), update_entity(id,...). Host UUID; kind character/organization/location/item; aliases bounded; descriptionVisibility and visibility/holderId; locked fields require explicit author writes |
+| Location | set_location(entityId,value), one current location plus source evidence; truth does not automatically become other actors' beliefs |
+| Relations | add_relation, update_relation(id,...), end_relation(id). Stable ID, direction/type/detail, addresses, active/ended, validFrom/validUntil, visibility/holder/lock/source. Same active relation assertion is deduplicated. Model and knowledge projections retain lifecycle and IDs |
+| Facts | set_fact with stable id/key, bounded scalar, visibility/holder/lock/source |
+| Cognition | set_belief and observe(holderId,subjectId,key,value,kind). Observation/rumor/belief change cognition only, not world truth |
+| Goals | set_goal with owner/text/status/motivation/successCondition/visibility/source |
+| Inventory | change_inventory, bounded nonnegative resulting quantity, visibility/holder/source |
+| Variables | set_variable/increment_variable with scope world(default)/card/scene. Card/world values belong to the current world branch; scene values only exist in draft evaluation and do not persist |
+| Plot | set_plot_thread, explicit planned/planted/partially_resolved/resolved/abandoned |
+| Schedule | schedule, cancel_schedule. Finite due time, actor, optional goal link, nonrecursive operation list; cancelled events retain reason |
+| Author references | set_reference with own revision and source commit; references are non-canon materials; private holder null is author-only, holder player means player+author |
+| Chapters | mark_chapter(title), author-only metadata operation with source commit |
 
-## Final implementation clarifications
-- branch.head is UUID|null; sourceRevision UUID; scene.seq numeric. Runs are scoped by (worldId,branchId,runId).
-- advance.executed/cancelled are schedule-ID arrays.
-- saveRun/getRun/listRuns persist drafts; cancelled/committed are terminal, startup marks unfinished runs interrupted. raw provider JSON is not a public draft.
-- resetProjectionReceipts() is trusted restore-only; revise() is an atomic fork-before-target plus replacement commit with rollback on failure.
-- increment_variable {key,amount} requires an existing numeric variable, finite bounded amount/result.
-- GET /api/backup returns JSON bundle, not ZIP. CLI restore requires a new directory and verifies reference closure.
-- POST /api/worlds/:id/card-action accepts {branchId,actionIndex,runId,expectedHead}; actions come from saved card, author:false.
-- POST /api/worlds/:id/revise accepts {branchId,commitId,narrative,operations}.
-- POST /api/runs/:opaqueToken/retry reuses a structured saved draft; no model call.
-- POST /api/worlds/:id/recover-projection retries persistent outbox without regenerating.
-- GET /api/cards/:id returns {card,report}; /original downloads exact original.
-- POST /api/worlds may accept greetingIndex (0 default, positive alternate).
-- Every world-scoped POST requires explicit nonempty branchId.
-- Player responses redact original operations, hidden plans, NPC intent; NPC location uses player belief. Author responses contain full audit fields.
-- Demo uses real data/host with deterministic sample text, labeled as such; real model path supports SSE and nonstream JSON, never auto-retries paid calls.
+## Scheduling and cognition
+
+Default `preconditionMode=actor`: both ordinary position/variable predicates and explicit belief predicates use the scheduled actor's projected knowledge at due time. An explicit author-authored `preconditionMode=world` is reserved for physical/world-legality predicates, not NPC knowledge. Rules/models cannot silently choose this mode.
+
+After a decision predicate passes, operations are validated against authoritative state for actual legality, inventory and locks. Expected domain invalidation (including LOCKED_FIELD/LOCKED_FACT) cancels that event with a reason; other valid due events continue. Storage/programming errors propagate. Player-decision boundaries pause rather than auto-act. Autonomy remains default-off, bounded, zero model calls for rule-only schedules.
+
+## Audience and author text
+
+`commit()` accepts optional `publicNarrative` only for trusted author writes. `narrative` on author actions/revisions is an author audit record; it is not automatically player narration. A separately entered publicNarrative is the only published text for that author commit. The audience record is immutable and written in the world transaction. Legacy author commits without metadata default to author-only.
+
+The same projection drives player DOM, model requests, source search, chapters, knowledge packages and TXT export. Hidden audits never become prompt history. Public card description comes from the actor-filtered main entity; raw imported files remain author management material. Switching from author to player clears author dialogs and stale content.
+
+## Behavior and lifecycle
+
+Data-only templates support char/user/getvar, bounded if/else and collection loops. No eval, JS/Lua, shell or arbitrary property access. Finite-width text regex rules run in input/model_output/display stages; unsupported repetition/groups/backreferences are reported and disabled. Rendering never changes canonical evidence.
+
+input → before_generate → model → model_output stages prepare one combined proposal. Their reads use actor-filtered state. A stored post_commit notice is produced once, inside the canonical transaction, for generated/card/author/schedule commits. It is read-only; reconnect returns the stored notice, never reruns a callback. Player snapshots expose notices only for visible commits.
+
+## Context and model requests
+
+SQLite stores rebuildable frozen checkpoint records: world/branch/actor, source version, visibility version, covered source IDs, cut point, summary version, immutable text and epoch. Completed 20-scene blocks use bounded source excerpts, not fabricated semantic summaries. Recent history is appended unchanged; query-driven bounded recall supplies matching earlier visible sources with commit IDs. Fork/revision, source or permission changes produce a different epoch. No extra model call is needed.
+
+One OpenAI-compatible Chat Completions path uses JSON narrative+operations. Tool calling is explicitly disabled for this contract, not inferred from provider capability. Optional `STORY_OPENAI_EXTRA_PARAMS` allows temperature/top_p/penalties/seed/stop only; it cannot override messages/tools/headers/identity/stream. First-response and idle timeouts differ; normal ongoing streaming has no fixed 120-second cutoff. There is no automatic paid retry or key rotation.
+
+All attempts remain accounted for. Missing usage is unknown; manual price estimates are not bills or currency hard limits. Local byte-prefix diagnostics are not provider cache-hit rates.
+
+## HTTP overview
+
+- GET config/health/cards/worlds; POST import and worlds
+- GET world snapshot with explicit author/player view; actor-view requires author view
+- POST turn requires branch/message/runId/mode; run SSE replays draft, terminal state and saved postCommitNotice; cancel and settlement-only retry are explicit
+- POST actions/revise accepts private audit narrative plus optional separately authored publicNarrative; all world POSTs require branchId
+- POST card-action/fork/select-branch/advance/autonomy/recover-projection use the same state owner
+- GET knowledge/chapters/knowledge-search/export uses the requested permitted view; Markdown content in knowledge JSON is escaped rather than raw active markup
+- GET backup returns a checksum/reference-checked JSON bundle (not ZIP). Restore requires a new directory. Credentials and raw host logs are excluded
+- Assets are validated safe media served by content hash; no external URL auto-download, file path trust, or script execution
+
+## Still-open acceptance gates
+
+Real Chromium is environment-blocked. macOS/Windows are not run on those systems; Windows directory flush remains unverified. Android WorldMode APK/content-URI/storage integration is not implemented. Broad licensed-card media/behavior samples and large-import cancellation/target-memory tests remain open. Real model quality/cache/cost evaluation needs explicit budget and human review. No optional hot-unload or full old-plugin compatibility is claimed.

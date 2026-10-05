@@ -111,6 +111,7 @@ export function renderSite(inventory) {
 <link rel="stylesheet" href="assets/manual.css?v=20260903-screenshots"><script src="assets/manual-state.js" defer></script><script src="assets/manual.js" defer></script>
 </head>
 <body>
+<aside role="note">本页保留上游 Tavern 说明与下载链接，不是本 fork 的 Story Runtime 发行页。请先阅读 <a href="https://github.com/lurenyi4/dsh-tavern#readme">本 fork 的运行说明与当前验收状态</a>。</aside>
 <a class="skip-link" href="#main">跳到正文</a>
 <header class="site-header"><a class="brand" href="#a01"><span class="brand-mark" aria-hidden="true"></span><span>DSH Tavern <b>Docs</b></span></a><button class="search-trigger" type="button" hidden>搜索文档 <kbd>⌘ K</kbd></button><nav aria-label="顶部导航">${link('a02', '安装与启动')}${link('index', '功能索引')}${link('help', '帮助')}<a href="https://github.com/flizzywine/dsh-tavern" target="_blank" rel="noopener noreferrer">GitHub ↗</a><button id="theme-toggle" type="button" aria-label="切换深色主题" hidden>◐</button></nav></header>
 <div class="mobile-bar"><button id="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar">☰ 功能目录</button><span>使用文档</span></div>

@@ -64,7 +64,7 @@ test('real HTTP lifecycle: imports, idempotency, cancellation, schedules, privac
  ]});
  assert.equal(current.state.variables.courage,7);assert.equal(current.state.inventory.find(x=>x.item==='提灯').quantity,2);assert.equal(current.state.relations.length,2);
  const player=await request(url,worldPath+'?view=player');assert.ok(!JSON.stringify(player).includes(secret),'private NPC fact/belief/goal absent from reader response');const author=await request(url,worldPath+'?view=author');assert.ok(JSON.stringify(author).includes(secret));
- const attemptsBefore=current.usage.length,scenesBefore=current.scenes.length;
+ const attemptsBefore=current.usage.length,scenesBefore=author.scenes.length;
  const advanced=await request(url,worldPath+'/advance',{branchId:b,to:6,maxEvents:1});assert.equal(advanced.executed.length,1);const advancedAuthor=await request(url,worldPath+'?view=author');assert.equal(advancedAuthor.state.characters.find(x=>x.id==='card-main').location,'广场');assert.equal(advancedAuthor.scenes.length,scenesBefore+1);assert.equal(advanced.snapshot.state.characters.find(x=>x.id==='card-main').location,null);assert.equal(advanced.snapshot.usage.length,attemptsBefore);
  const more=await request(url,worldPath+'/advance',{branchId:b,to:6,maxEvents:1});assert.equal(more.executed.length,1);assert.equal((await request(url,worldPath+'?view=author')).state.characters.find(x=>x.id==='messenger').location,'杂货铺');
  const none=await request(url,worldPath+'/advance',{branchId:b,to:6,maxEvents:1});assert.equal(none.executed.length,0);assert.equal(none.snapshot.usage.length,attemptsBefore);assert.equal(none.snapshot.scenes.length,more.snapshot.scenes.length);
@@ -103,9 +103,10 @@ test('bounded autonomy changes due NPC state without chat and pauses on player d
  server=await startServer({dataDir:temp,port:0,runtimeDir,demoDelay:0,env:{}});const url=server.url;
  const card=await request(url,'/api/import',{filename:'autonomy.json',base64:Buffer.from(JSON.stringify(v2)).toString('base64')},201),s=await request(url,'/api/worlds',{name:'Automatic NPC schedules',cardId:card.card.id},201),w=s.world.id,b=s.branch.id,p=`/api/worlds/${w}`;
  const scheduled=await request(url,p+'/actions',{branchId:b,narrative:'为向导准备三个独立日程。',operations:[1,2,3].map(i=>({op:'schedule',at:0,entityId:'card-main',label:'有界事件 '+i,operations:[{op:'set_variable',key:'scheduled_'+i,value:true}]}))});
+ const scheduledAudit=await request(url,p+'?view=author');
  await request(url,p+'/autonomy',{branchId:b,enabled:true,maxEvents:1,durationSeconds:10});
  let after;await expect.poll(async()=>{after=await request(url,p+'?view=author');return after.autonomy.enabled;},{timeout:5000,intervals:[50,100,250,500],message:'autonomy should stop at the one-event budget'}).toBe(false);
- assert.equal(after.scenes.length,scheduled.scenes.length+1);assert.equal(after.state.schedules.filter(x=>x.status==='pending').length,2);assert.equal(after.usage.length,0);assert.equal(after.autonomy.remainingEvents,0);
+ assert.equal(after.scenes.length,scheduledAudit.scenes.length+1);assert.equal(after.scenes.filter(x=>x.source==='schedule').length,1);assert.equal(after.state.schedules.filter(x=>x.status==='pending').length,2);assert.equal(after.usage.length,0);assert.equal(after.autonomy.remainingEvents,0);
  const ids=after.state.schedules.filter(x=>x.status==='pending').map(x=>x.id);
  await request(url,p+'/actions',{branchId:b,narrative:'下一步需要玩家决定。',operations:[...ids.map(id=>({op:'cancel_schedule',id})),{op:'schedule',at:after.state.time,entityId:'card-main',label:'玩家必须确认的移动',operations:[{op:'set_location',entityId:'player',value:'不应自动抵达'}]}]});
  await request(url,p+'/autonomy',{branchId:b,enabled:true,maxEvents:3,durationSeconds:10});

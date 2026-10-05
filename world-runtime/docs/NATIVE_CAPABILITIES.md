@@ -52,3 +52,11 @@ observe 明确记录 observation/rumor/belief，不直接修改世界真相。NP
 
 ## 流式连接
 模型首响应和后续空闲超时分开；持续正常流式输出不会被固定120秒总时限中断。没有无限自动重试或自动换密钥。
+
+## 第二轮修正说明
+
+作者操作/修订的“事件说明”是作者audit，默认只在作者视图。另有“玩家可见叙事”字段供明确发布；旧作者记录按保守规则隐藏。关系导出与模型状态明确区分active/ended及有效期。普通日程条件按自身认知，world真相条件需作者明确选择。提交后通知随commit保存并可重连；不重复运行副作用。
+
+checkpoint已持久保存在SQLite，关联actor、来源、可见性、摘要版本和覆盖ID；较早可见正文有查询召回。它仍是确定性摘录和词面召回，不是语义质量保证。新存档格式v2防止旧程序忽略audience；迁移前一致性备份保留在数据目录，失败不清空原库。
+
+STORY_OPENAI_EXTRA_PARAMS可显式配置temperature/top_p/presence_penalty/frequency_penalty/seed/stop；受控白名单不能覆盖消息、工具、身份、认证或stream。本应用仍为JSON正文+operations模式，不启用tool calling。

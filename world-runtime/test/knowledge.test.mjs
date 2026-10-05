@@ -15,6 +15,6 @@ test('real HTTP chapter/search/export routes honor view and current branch',asyn
  const {startServer}=await import('../src/server.mjs');const dir=mkdtempSync(join(tmpdir(),'story-knowledge-http-'));const server=await startServer({dataDir:dir,port:0,env:{}});t.after(async()=>{await server.close();rmSync(dir,{recursive:true,force:true});});
  const call=async(path,data)=>{const r=await fetch(server.url+path,data?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)}:undefined);assert.ok(r.ok);return r.json();};
  let s=await call('/api/worlds',{name:'章节测试'});const p='/api/worlds/'+s.world.id;
- s=await call(p+'/actions',{branchId:s.branch.id,operations:[{op:'mark_chapter',title:'归来'},{op:'set_fact',key:'暗门',value:'秘密原文',visibility:'private',holderId:'card-main'}],narrative:'你回到了渡口。'});
+ s=await call(p+'/actions',{branchId:s.branch.id,operations:[{op:'mark_chapter',title:'归来'},{op:'set_fact',key:'暗门',value:'秘密原文',visibility:'private',holderId:'card-main'}],narrative:'作者记录私有资料。',publicNarrative:'你回到了渡口。'});
  assert.equal((await call(p+'/chapters')).chapters[0].title,'归来');assert.ok(!JSON.stringify(await call(p+'/knowledge')).includes('秘密原文'));assert.ok(JSON.stringify(await call(p+'/knowledge?view=author')).includes('秘密原文'));assert.ok((await call(p+'/knowledge-search?q='+encodeURIComponent('渡口'))).results.some(r=>r.kind==='scene'));
 });

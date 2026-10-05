@@ -1,3 +1,4 @@
+Write-Warning 'This inherited installer targets upstream DSH Tavern, not this fork Story Runtime. Use npm run install:world-runtime and the start-story-runtime launcher; see README.md.'
 $ErrorActionPreference = 'Stop'
 $PreviousConsoleOutputEncoding = [Console]::OutputEncoding
 $PreviousOutputEncoding = $OutputEncoding

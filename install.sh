@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -eu
+printf "%s\n" "NOTICE: this inherited installer targets upstream DSH Tavern, not this fork Story Runtime. Use npm run install:world-runtime then the start-story-runtime launcher; see README.md." >&2
 
 # Inherit the registry throughout bootstrap, Profile and plugin installation.
 export npm_config_registry="${DSH_TAVERN_NPM_REGISTRY:-https://registry.npmmirror.com}"
