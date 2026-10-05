@@ -27,3 +27,7 @@ Upload reception records its primary write/sync/close error and terminal state b
 When restart corrects an old publication failure to completed, the current error field is cleared and the separate durability warning remains. Completed never means an injected fsync failure proved physical power-loss durability.
 
 Independent reviews for080b9dd are preserved; this new candidate requires two new reviews. Original Android, devices, real browser decoding/visuals, representative licensed ecosystem cards and model-quality/cost gates remain open.
+
+### Worker failures use the same failure ownership
+
+Receive errors, worker parser/timeout failures, and errors saving a ready result now use the same small failJob path. An existing primary error is preserved; closeWarning, cleanupWarning and persistenceWarning are secondary diagnostics. persistenceWarning records a previous failed journal write; cancel/close retries persistence. No implementation can promise the latest error survived a crash while every journal write is failing; the in-process result remains accurate and startup still reconciles existing records. Tests explicitly restore journal writes before asserting exact primary-error persistence across reopen.

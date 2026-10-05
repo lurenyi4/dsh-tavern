@@ -89,6 +89,30 @@ export class ImportJobs {
       return false;
     }
   }
+  async failJob(j, error, file) {
+    if (!["cancelled", "interrupted"].includes(j.status)) {
+      j.status = "failed";
+      j.error ??= {
+        code: error.code || "IMPORT_FAILED",
+        message: error.message,
+      };
+    }
+    delete j.prepared;
+    try {
+      await file?.close();
+    } catch (e) {
+      j.closeWarning = { code: e.code || "IMPORT_CLOSE", message: e.message };
+    }
+    await this.cleanup(j);
+    try {
+      await this.save(j);
+    } catch (e) {
+      j.persistenceWarning = {
+        code: e.code || "IMPORT_STORAGE",
+        message: "失败记录曾保存失败；清理重试或关闭时会再次保存。",
+      };
+    }
+  }
   async save(j) {
     const previous = j.saving ?? Promise.resolve();
     j.saving = previous
@@ -105,6 +129,7 @@ export class ImportJobs {
           warning: j.warning,
           cleanupWarning: j.cleanupWarning,
           closeWarning: j.closeWarning,
+          persistenceWarning: j.persistenceWarning,
           cardId: j.result?.card.id || j.cardId,
         };
         const file = join(this.root, j.id + ".json");
@@ -127,6 +152,7 @@ export class ImportJobs {
       warning: j.warning,
       cleanupWarning: j.cleanupWarning,
       closeWarning: j.closeWarning,
+      persistenceWarning: j.persistenceWarning,
       cardId: j.result?.card.id || j.cardId,
       preview: j.prepared
         ? { card: j.prepared.card, report: j.prepared.report }
@@ -258,22 +284,13 @@ export class ImportJobs {
                 j.prepared = message.prepared;
                 j.status = "ready";
               } else {
-                j.error = message.error;
-                j.status = "failed";
-                await rm(path, { force: true });
+                await this.failJob(j, message.error);
+                return;
               }
               await this.save(j);
             }
           } catch (e) {
-            j.status = "failed";
-            j.error = { code: e.code || "IMPORT_STORAGE", message: e.message };
-            delete j.prepared;
-            await this.cleanup(j);
-            try {
-              await this.save(j);
-            } catch {
-              /* Original persistence error remains visible; startup retries cleanup. */
-            }
+            await this.failJob(j, e);
           } finally {
             resolve();
           }
@@ -291,24 +308,7 @@ export class ImportJobs {
       });
       return this.get(id);
     } catch (e) {
-      if (!["cancelled", "interrupted"].includes(j.status)) {
-        j.status = "failed";
-        j.error = { code: e.code || "IMPORT_FAILED", message: e.message };
-      }
-      try {
-        await file?.close();
-      } catch (closeError) {
-        j.closeWarning = {
-          code: closeError.code || "IMPORT_CLOSE",
-          message: closeError.message,
-        };
-      }
-      await this.cleanup(j);
-      try {
-        await this.save(j);
-      } catch {
-        /* Keep the original receive error; startup reconciles the journal. */
-      }
+      await this.failJob(j, e, file);
       throw e;
     }
   }
@@ -380,7 +380,8 @@ export class ImportJobs {
       if (terminal.has(j.status)) {
         const prior = j.cleanupWarning;
         await this.cleanup(j);
-        if (prior || j.cleanupWarning) await this.save(j);
+        if (prior || j.cleanupWarning || j.persistenceWarning)
+          await this.save(j);
         continue;
       }
       if (j.status === "registering") {

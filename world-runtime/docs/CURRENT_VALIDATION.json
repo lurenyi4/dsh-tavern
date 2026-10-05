@@ -1,12 +1,12 @@
 {
   "date": "2026-10-05",
-  "stage": "normalized-content and failure-lifecycle repair freeze; two new independent reviews pending",
+  "stage": "shared worker/receive failure finalization freeze; two new independent reviews pending",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
   "node": "24.19.0",
   "runtime": "0.1.5-rc.2",
   "unit": {
-    "tests": 186,
-    "pass": 186,
+    "tests": 191,
+    "pass": 191,
     "fail": 0,
     "skipped": 0
   },
@@ -28,7 +28,7 @@
     "world-runtime/src/domain-state.mjs": "cdd981a7cbccdb67695cb0a004f0bf7b4ed3f83fa3c1052eec77d3b5cb6a8652",
     "world-runtime/src/host.mjs": "627967849a3a733b3a7d58e8398ea4a6eb0f2eae2d95b09a62e839d7e8098498",
     "world-runtime/src/import-formats.mjs": "cbe3fb9254d2a7a11353967f4006ca24a27197458505616f110f5ba215702b14",
-    "world-runtime/src/import-jobs.mjs": "5299117293d7fdaf701a994d1ed6b43c72b1ca0a63d4a2d160f92d0a26cf9fe8",
+    "world-runtime/src/import-jobs.mjs": "30f0758af96f8a2db26bbd161e27544cdb9f7dabcf0270b4c866834e5657f151",
     "world-runtime/src/import-risu.mjs": "5f9f075b6d36e15243adb8d3622a640dbd8fdad860ad5db6774f0411de5280cd",
     "world-runtime/src/import-worker.mjs": "18494c8710a06b41f57db2050788b2d745fbe15d4fe01cb6b697fa1f6c8311b7",
     "world-runtime/src/importer.mjs": "e951ccf68ee4eda57a16e1558e688767147c366407207a106174d6a0c9b52578",
@@ -74,6 +74,8 @@
     "world-runtime/test/upload-error-combinations.test.mjs": "19876a0c4195d28493bb5a9867cb7623f3aed251c7ebc941906a3988b20f2793",
     "world-runtime/test/upload-storage-fault.test.mjs": "5398c6151d7d5b918b6b227f754d4aa55a5e6e3f3a5e648ec4cdf967090c04f9",
     "world-runtime/test/usage-report.test.mjs": "0c42e45fc148caab3a422dbafa7c1ddfc57e4bc344b9d251ba4c0a17153c8baf",
+    "world-runtime/test/worker-error-cleanup.test.mjs": "dacd1f56dd01e9a733befa55b6ed048d627c2ff609f5095087727ca945319788",
+    "world-runtime/test/worker-error-persistence.test.mjs": "6e675a84fc32b0cac1d428acf89283bc4801e66c3b42728c6b6b9c68f2b8b494",
     "world-runtime/fixtures/demo-card.json": "8282ba4762d260eaf328527ebf36834b7c29b866f2878f41d2fda77b8f2f6252",
     "world-runtime/fixtures/import-card-unsupported-module.charx": "0ed833e9c3e47611f251ea59f8ed83cc782a07dd7cadf521c6e2389b55260e40",
     "world-runtime/fixtures/import-card-v2.json": "d480117acd494ea6b0d7a29f9f95881f8e1db92815e28890d87cdd5fed1747cb",
@@ -90,11 +92,12 @@
   "logical_database_version": 2,
   "ci": "workflow added; not executed remotely",
   "repair_base_commit": "12b0f306cde8a200ff7e200aa125419639c40bcc",
-  "base_commit": "080b9dd1dd0b930fcfc9e6cec3cd76761cb3bdb0",
+  "base_commit": "091ee8fc052fc53b0c08e5efb3c2b9552d34a312",
   "reviewed_publication_candidate": "58562fac0cd308028000404cc4e05a1ed45a6d54",
   "evidence": [
-    "current-validation/metadata-red.txt",
-    "current-validation/metadata-unit.txt",
-    "current-validation/metadata-http-dom.txt"
+    "current-validation/worker-failure-red.txt",
+    "current-validation/worker-failure-http-green.txt",
+    "current-validation/worker-failure-unit.txt",
+    "current-validation/worker-failure-http-dom.txt"
   ]
 }

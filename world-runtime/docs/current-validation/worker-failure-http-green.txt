@@ -1,0 +1,11 @@
+{"case":"worker-invalid-json-plus-cleanup-failure","result":{"http":200,"id":"fff055e9-98b9-487d-b388-b45ef83d40c1","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"INVALID_JSON","message":"card.json 不是有效 JSON"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}},"faults":1}
+{"case":"retry-cleanup","result":{"http":200,"id":"fff055e9-98b9-487d-b388-b45ef83d40c1","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"INVALID_JSON","message":"card.json 不是有效 JSON"}}}
+✔ world-runtime/test/worker-error-cleanup.test.mjs (253.97289ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 261.426618

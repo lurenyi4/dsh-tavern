@@ -1,6 +1,6 @@
 {
   "kind": "jsdom supplemental DOM integration; NOT a real browser",
-  "at": "2026-10-05T14:35:12.709Z",
+  "at": "2026-10-05T14:55:18.347Z",
   "steps": [
     "create demo world from real app click",
     "SSE draft then authoritative narrative/location commit and UI refresh",

@@ -1,0 +1,26 @@
+✔ normalized depth, string, array and name boundaries are shared with world consumption (285.172583ms)
+✔ normalized node expansion budget has a finite exact boundary (874.253982ms)
+✔ valid source structures beyond the normalized contract fail before ready or registration and retain existing cards (1087.630107ms)
+✔ normalized serialized byte limit is exact and shared (197.328053ms)
+✔ ordinary module raw-plus-mapped expansion is rejected before acceptance when normalized nodes exceed budget (878.74562ms)
+✔ world-runtime/test/media-publication.test.mjs (754.255993ms)
+{"originalBytes":636763,"normalizedBytes":1762956,"preview":"ready","accepted":"completed","world":201,"originalNodes":40005,"normalizedNodes":105029,"backupStatus":200}
+{"originalBytes":258,"normalizedBytes":900,"preview":"ready","accepted":"completed","world":201,"originalNodes":24,"normalizedNodes":49,"backupStatus":200}
+{"originalBytes":408963,"normalizedBytes":169605,"preview":"ready","accepted":"completed","world":201,"originalNodes":10006,"normalizedNodes":10031,"backupStatus":200}
+✔ world-runtime/test/ordinary-metadata-closure.test.mjs (10734.073877ms)
+{"case":"transient cancel cleanup, then normal record retention","fault":true,"recordRetained":false,"uploadAfterRestart":false,"remainingUploadBytes":0}
+✔ world-runtime/test/storage-fault-lifecycle.test.mjs (949.671859ms)
+✔ upload writeFile failure retains primary error through cleanup failure and restart (86.347642ms)
+✔ upload sync failure retains primary error through cleanup failure and restart (39.622542ms)
+✔ upload close failure retains primary error through cleanup failure and restart (14.837841ms)
+{"returnedError":{"code":"EIO","message":"Upload fsync failed"},"status":"failed","storedError":{"code":"EIO","message":"Upload fsync failed"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}}
+Explicit cancel recovers slot and removes upload
+✔ world-runtime/test/upload-storage-fault.test.mjs (230.609057ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10778.202163

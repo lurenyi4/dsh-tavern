@@ -1,0 +1,3 @@
+{"case":"name-boundary-across-entrypoints","length":512,"legacyHTTP":201,"binaryJob":"ready"}
+{"case":"name-boundary-across-entrypoints","length":513,"legacyHTTP":400,"binaryJob":"failed"}
+{"case":"actual-http-publish-fsync-failure-world-backup-reopen","status":"completed","warning":{"code":"IMPORT_DURABILITY","storageCode":"EIO","message":"卡片已注册，但目录持久化确认失败；请保留原件并备份，不能保证断电后的保存。"},"reopened":"completed"}

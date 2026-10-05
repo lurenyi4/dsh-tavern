@@ -1,0 +1,18 @@
+✔ supplemental jsdom: real app.js events + live HTTP/SSE/SQLite/DSH (not Chromium) (6280.234844ms)
+✔ release R02: a fresh DOM resumes the same live SSE run, preserves selection and can cancel (1580.609673ms)
+✔ release R04: late author responses and pending player views never expose private DOM (102.734719ms)
+✔ knowledge UI uses live chapter commits and view-filtered search (140.641978ms)
+✔ author UI creates a stable new entity and inspects its isolated knowledge (118.210431ms)
+✔ M1 author audit stays out of player DOM, source search and exports after view switch (127.130059ms)
+✔ media import previews actual image/audio bytes before acceptance and presents local audio controls (508.861485ms)
+✔ real HTTP lifecycle: imports, idempotency, cancellation, schedules, privacy, fork, backup and ACK recovery (826.510615ms)
+✔ interrupted durable draft settles on explicit retry without a new model call (88.503148ms)
+✔ bounded autonomy changes due NPC state without chat and pauses on player decisions (3987.086975ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10169.189486

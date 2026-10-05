@@ -1,0 +1,20 @@
+{"originalBytes":636763,"normalizedBytes":1762956,"preview":"ready","accepted":"completed","world":400,"worldError":{"code":"INVALID_INPUT","message":"JSON input is too complex"},"originalNodes":40005,"normalizedNodes":105029,"backupStatus":400,"backupError":{"code":"BACKUP_CLOSURE","message":"card.json 格式不受支持（IMPORT_LIMIT）"}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Every accepted ordinary card should permit backup
+
+400 !== 200
+
+    at file:///workspace/scratch/476e99dedb43/normalized-focused-review-20261005/red-ordinary-metadata-closure.mjs:20:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 400,
+  expected: 200,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

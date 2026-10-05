@@ -1,0 +1,23 @@
+{"case":"worker-invalid-json-plus-cleanup-failure","result":{"http":200,"id":"8645d446-5b17-4de4-941f-e5eda1c81b29","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"EBUSY","message":"Independent cleanup EBUSY"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}},"faults":2}
+{"case":"retry-cleanup","result":{"http":200,"id":"8645d446-5b17-4de4-941f-e5eda1c81b29","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"EBUSY","message":"Independent cleanup EBUSY"}}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'EBUSY'
+- 'INVALID_JSON'
+
+    at file:///workspace/scratch/476e99dedb43/media-final-full-audit/worker-error-cleanup.mjs:24:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'EBUSY',
+  expected: 'INVALID_JSON',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

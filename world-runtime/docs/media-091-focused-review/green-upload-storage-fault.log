@@ -1,0 +1,2 @@
+{"returnedError":{"code":"EIO","message":"Upload fsync failed"},"status":"failed","storedError":{"code":"EIO","message":"Upload fsync failed"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}}
+Explicit cancel recovers slot and removes upload

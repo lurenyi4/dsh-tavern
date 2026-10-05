@@ -1,0 +1,1 @@
+{"case":"transient cancel cleanup, then normal record retention","fault":true,"recordRetained":false,"uploadAfterRestart":false,"remainingUploadBytes":0}

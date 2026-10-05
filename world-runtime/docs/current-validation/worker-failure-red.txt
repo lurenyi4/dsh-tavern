@@ -1,0 +1,38 @@
+{"case":"worker-invalid-json-plus-cleanup-failure","result":{"http":200,"id":"457618b7-54e0-468a-8f90-531efb1b5daa","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"EBUSY","message":"Independent cleanup EBUSY"},"cleanupWarning":{"code":"EBUSY","message":"临时上传清理失败；取消或重启会重试。"}},"faults":2}
+{"case":"retry-cleanup","result":{"http":200,"id":"457618b7-54e0-468a-8f90-531efb1b5daa","filename":"ordinary-incomplete.json","size":8,"received":8,"status":"failed","error":{"code":"EBUSY","message":"Independent cleanup EBUSY"}}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'EBUSY'
+- 'INVALID_JSON'
+
+    at file:///workspace/scratch/476e99dedb43/dsh-tavern-recovered/Story-Runtime-Linux-0.1.0/world-runtime/test/worker-error-cleanup.test.mjs:24:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'EBUSY',
+  expected: 'INVALID_JSON',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
+✖ world-runtime/test/worker-error-cleanup.test.mjs (331.79538ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 340.474126
+
+✖ failing tests:
+
+test at world-runtime/test/worker-error-cleanup.test.mjs:1:1
+✖ world-runtime/test/worker-error-cleanup.test.mjs (331.79538ms)
+  'test failed'
