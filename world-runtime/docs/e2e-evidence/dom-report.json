@@ -1,0 +1,18 @@
+{
+  "kind": "jsdom supplemental DOM integration; NOT a real browser",
+  "at": "2026-10-05T12:55:03.537Z",
+  "steps": [
+    "create demo world from real app click",
+    "SSE draft then authoritative narrative/location commit and UI refresh",
+    "cancel real partial SSE preserves prior formal state",
+    "native card action button atomically increments persisted trust",
+    "real app JSON/PNG/CharX file input reports and malformed card preservation",
+    "create separate world from imported card through dialog and navigate back",
+    "author form previews/commits, inventory, multirelations and private fact reader filtering",
+    "real timer bounded NPC movement and manual messenger event with no extra chat/model attempt",
+    "history fork state isolation and stale SSE cannot change selected main UI",
+    "fresh DOM reload restores persisted active branch/story",
+    "new server restart exposes saved draft; UI settlement retry commits without another model attempt"
+  ],
+  "errors": []
+}

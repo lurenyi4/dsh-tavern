@@ -1,0 +1,29 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> dsh-profile-tavern@2.4.0 test:docs
+> node --test tests/manual-site.test.mjs tests/product-site.test.mjs tests/manual-pages.test.mjs
+
+✔ Pages 仅发布用户文档，静态链接在项目子路径下完整可用 (121.2263ms)
+✔ 生成结果与文字源一致，避免修改源后忘记重新生成 (14.007347ms)
+✔ 安装页提供与完整安装说明一致的可复制命令、当前适配版本和各平台步骤 (5.267159ms)
+✔ Android 公开安装命令固定引导脚本版本，避免 jsDelivr main 缓存倒退 (1.657538ms)
+✔ Android 公开安装命令不依赖 DSHA rc1 未提供的 curl (0.332091ms)
+✔ 代码块保持命令原文，转义 HTML 且不误识别管道和 Markdown (0.27782ms)
+✔ 文档只采用独立样例截图，不复用旧图片或加载远程脚本 (1.085373ms)
+✔ 截图有有效本地资源、替代文字、说明、来源与放大入口 (53.891911ms)
+✔ 网页公开样例下载与原创源数据一致，人物卡没有远程脚本依赖 (3.512046ms)
+✔ Android 公开安装入口不再标为实验性，并保留平台要求 (5.122436ms)
+✔ 所有静态资源、文章与页内锚点存在，支持 GitHub Pages 子目录 (25.994631ms)
+✔ 深链接、旧入口、非法和不存在的地址都有确定结果 (0.503634ms)
+✔ 关闭 JavaScript 后所有正文仍可顺序阅读 (0.502342ms)
+✔ Markdown 转换转义原始 HTML，只允许安全链接，生成语义表格 (0.171493ms)
+✔ 产品页可作为静态目录发布，所有本地图片、样式、脚本和锚点存在 (3.803647ms)
+✔ 目录链接及直接访问锚点会展开对应功能 (3.670491ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 220.324911

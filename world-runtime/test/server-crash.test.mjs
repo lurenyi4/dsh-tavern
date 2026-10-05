@@ -1,0 +1,19 @@
+import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import {spawn} from 'node:child_process';import {once} from 'node:events';import {mkdtemp,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {fileURLToPath} from 'node:url';import {randomUUID} from 'node:crypto';import {startServer} from '../src/server.mjs';
+const runtimeDir=process.env.STORY_DSH_RUNTIME_DIR||fileURLToPath(new URL('../.runtime/',import.meta.url));
+const cli=fileURLToPath(new URL('../cli.mjs',import.meta.url));
+async function post(base,path,data){const response=await fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});const value=await response.json();assert.ok(response.ok,JSON.stringify(value));return value;}
+test('actual mid-SSE SIGKILL preserves already displayed draft and marks uncertain attempt without recalling model',async t=>{
+ const root=await mkdtemp(join(tmpdir(),'world-live-crash-')),dataDir=join(root,'data');let calls=0,child,restored;const responses=new Set();
+ const provider=http.createServer(async(req,res)=>{calls++;for await(const _ of req){}responses.add(res);res.on('close',()=>responses.delete(res));res.writeHead(200,{'content-type':'text/event-stream'});res.write('data: '+JSON.stringify({choices:[{delta:{content:'{"narrative":"PUBLIC_DRAFT_BEFORE_CRASH'}}]})+'\n\n');});
+ await new Promise(r=>provider.listen(0,'127.0.0.1',r));
+ t.after(async()=>{if(child&&child.exitCode===null&&child.signalCode===null){child.kill('SIGKILL');await once(child,'exit');}await restored?.close();for(const r of responses)r.destroy();await new Promise(r=>provider.close(r));await rm(root,{recursive:true,force:true});});
+ child=spawn(process.execPath,[cli,'serve','--data-dir',dataDir,'--port','0'],{env:{...process.env,STORY_DSH_RUNTIME_DIR:runtimeDir,STORY_OPENAI_BASE_URL:'http://127.0.0.1:'+provider.address().port+'/v1',STORY_OPENAI_MODEL:'local-crash-mock',STORY_OPENAI_API_KEY:'',OPENAI_API_KEY:''},stdio:['ignore','pipe','pipe']});
+ let log='';child.stderr.on('data',b=>log+=b);
+ const base=await new Promise((yes,no)=>{const timer=setTimeout(()=>no(new Error('Child server startup timeout '+log)),15000);child.stdout.on('data',b=>{log+=b;const match=log.match(/Story Runtime(?: Linux)?: (http:\/\/127\.0\.0\.1:\d+)/);if(match){clearTimeout(timer);yes(match[1]);}});child.once('exit',code=>{clearTimeout(timer);no(new Error('Child exited '+code+' '+log));});});
+ const world=await post(base,'/api/worlds',{name:'真实进程崩溃测试'});const run=await post(base,'/api/worlds/'+world.world.id+'/turn',{branchId:world.branch.id,runId:randomUUID(),mode:'openai',message:'继续'});
+ const stream=await fetch(base+'/api/runs/'+run.runId+'/events',{signal:AbortSignal.timeout(15000)}),reader=stream.body.getReader();let output='';
+ while(!output.includes('PUBLIC_DRAFT_BEFORE_CRASH')){const next=await reader.read();assert.equal(next.done,false);output+=new TextDecoder().decode(next.value);}
+ const during=await(await fetch(base+'/api/worlds/'+world.world.id)).json();assert.equal(during.runs[0].draft,'PUBLIC_DRAFT_BEFORE_CRASH','SSE must never precede persisted draft checkpoint');assert.equal(during.scenes.length,0);await reader.cancel();
+ const exited=once(child,'exit');child.kill('SIGKILL');const [code,signal]=await exited;assert.equal(code,null);assert.equal(signal,'SIGKILL');
+ restored=await startServer({dataDir,port:0,runtimeDir,env:{}});const after=await(await fetch(restored.url+'/api/worlds/'+world.world.id)).json();assert.equal(after.runs[0].status,'interrupted');assert.equal(after.runs[0].draft,'PUBLIC_DRAFT_BEFORE_CRASH');assert.equal(after.scenes.length,0);assert.equal(after.usage[0].status,'failed');assert.equal(after.usage[0].inputTokens,null);assert.equal(calls,1);
+});

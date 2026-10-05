@@ -1,0 +1,11 @@
+✔ real HTTP lifecycle: imports, idempotency, cancellation, schedules, privacy, fork, backup and ACK recovery (752.355423ms)
+✔ interrupted durable draft settles on explicit retry without a new model call (79.273338ms)
+✔ bounded autonomy changes due NPC state without chat and pauses on player decisions (4212.087455ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5263.090247

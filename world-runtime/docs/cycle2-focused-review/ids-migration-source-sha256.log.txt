@@ -1,0 +1,4 @@
+299c48e8ad864e8a2196448eb8e652f39179cb8fcfc90fae2ff372bd8d384417  world-runtime/src/domain-state.mjs
+26449feae3893b1d5fc86e0751d9eac0ba4ca772f8cee71921294deb54e28cfe  world-runtime/src/behavior.mjs
+d11818d47689a6f1ad00455a5adda5be961437db08f35e139f02edaaeb671506  world-runtime/src/store.mjs
+b1555804ac003f37b06d35e40568fc1eba8e5c5d89abb6bc9de7e2cd0dfac665  world-runtime/src/server.mjs

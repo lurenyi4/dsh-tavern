@@ -1,0 +1,79 @@
+{
+  "spec": "chara_card_v2",
+  "spec_version": "2.0",
+  "wrapper_unknown": 17,
+  "data": {
+    "name": "渡口向导",
+    "description": "渡口有一位向导。",
+    "personality": "谨慎",
+    "scenario": "初次到访",
+    "first_mes": "请选择一条路。",
+    "mes_example": "仅为例句",
+    "tags": [
+      "synthetic"
+    ],
+    "mysterious": {
+      "value": "保留未知字段"
+    },
+    "alternate_greetings": [
+      "晚间渡口",
+      "",
+      "晚间渡口"
+    ],
+    "creator": "Synthetic fixture",
+    "system_prompt": "保持角色",
+    "post_history_instructions": "慢慢推进",
+    "character_book": {
+      "entries": [
+        {
+          "id": 7,
+          "keys": [
+            "渡口"
+          ],
+          "content": "渡口夜间关闭。",
+          "enabled": true,
+          "constant": false,
+          "unknown_flag": 99
+        }
+      ]
+    },
+    "extensions": {
+      "future_extension": {
+        "a": [
+          1,
+          true,
+          null
+        ]
+      },
+      "variables": {
+        "courage": 1
+      },
+      "regex_scripts": [
+        {
+          "name": "保留不执行",
+          "findRegex": "sample",
+          "replaceString": "sample"
+        }
+      ],
+      "story_runtime": {
+        "variables": {
+          "trust": 0
+        },
+        "actions": [
+          {
+            "id": "wave",
+            "label": "打招呼",
+            "narrative": "你挥手致意。",
+            "operations": [
+              {
+                "op": "set_variable",
+                "key": "trust",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

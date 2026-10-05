@@ -1,0 +1,23 @@
+✔ F01: run-reserved host IDs survive staging, saved draft, restart and identical retry (14.24882ms)
+✔ F02: ended relations keep IDs, lifecycle, addresses and evidence in model and knowledge (19.886675ms)
+✔ F03/F05: actor-local ordinary conditions and lock conflicts cancel individual events, not the queue (11.272565ms)
+✔ M1: author audit text and private main description never reach player surfaces; explicit narrative is separate (7.444963ms)
+✔ M1 legacy author scenes without audience metadata are conservatively hidden (0.346181ms)
+✔ F04: checkpoints persist, recall early sources after 85 scenes, and change on actor privacy/fork (213.309363ms)
+✔ F06: post-commit notices are durable per commit for generated and author/card paths without reexecution (6.638322ms)
+✔ F01/F06 real HTTP: model references its staged host ID and reconnect replays the saved notice (184.29433ms)
+✔ F05: relation and variable locks cancel only stale schedules; unlock permits a new schedule (22.998791ms)
+✔ knowledge Markdown encodes source markup rather than enabling HTML or remote image syntax (4.74006ms)
+✔ author-only reference is distinct from player-private reference and can revoke player access (3.901811ms)
+✔ source-setting revisions invalidate a checkpoint even when visibility and history cutoff do not change (3.301044ms)
+✔ v1→v2 migration backs up a consistent original before upgrading audience-aware format (10.512492ms)
+✔ unknown future format is rejected before any migration backup or data rewrite (3.444156ms)
+✔ migration backup flush failure leaves the original v1 version untouched (5.855536ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 590.914087

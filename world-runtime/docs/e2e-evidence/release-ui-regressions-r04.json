@@ -1,0 +1,20 @@
+{
+  "kind": "jsdom + delayed real HTTP response; not Chromium",
+  "at": "2026-10-05T12:55:05.142Z",
+  "observations": [
+    {
+      "stage": "late-author-response",
+      "actualAuthorResponseHadPrivateData": true,
+      "newerPlayerRenderedFirst": true,
+      "privateDataInPlayerDOM": false
+    },
+    {
+      "stage": "pending-player-response",
+      "oldAuthorFieldsClearedImmediately": true,
+      "tabSwitchesCannotRevealCachedPrivateData": true,
+      "transientPrivateDOMLeaks": 0
+    }
+  ],
+  "leaks": [],
+  "errors": []
+}

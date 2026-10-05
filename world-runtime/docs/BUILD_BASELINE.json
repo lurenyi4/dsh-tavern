@@ -1,0 +1,23 @@
+{
+  "app_version": "0.1.0-linux",
+  "upstream_repo": "https://github.com/flizzywine/dsh-tavern",
+  "upstream_commit": "403df2d1e4080e4846627a58572c6347e3eefc02",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "architecture": "x86_64",
+  "node": "v24.19.0",
+  "runtime": "0.1.5-rc.2",
+  "runtime_installed_with": "npm ci, fixed upstream lock, ignore-scripts",
+  "model_calls_to_paid_providers": 0,
+  "browser_validation": "blocked; not passed",
+  "other_platforms": "not validated",
+  "locks": {
+    "config/cli-runtime/package.json": "46585ba980c82e1a8fc2d48fa26c92fd81ccdda98c76b772c764cbd7fcfaef74",
+    "config/cli-runtime/package-lock.json": "b95b61bf731a037bba686608151a19d168ea21afdd29f27c6a697b1b1e12dbca",
+    "pnpm-lock.yaml": "a5f5ad35ed55951aa1d1e85a6e5f5fdae340799ae6682c489bae511caca11186"
+  },
+  "tested_counts": {
+    "world_tests": 104,
+    "api_and_dom": 6,
+    "upstream_focused": 34
+  }
+}

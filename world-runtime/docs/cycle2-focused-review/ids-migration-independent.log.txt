@@ -1,0 +1,14 @@
+✔ independent HTTP: four creation stages, failed commit rollback, restart settlement, cancellation (243.242699ms)
+✔ independent domain: supplied IDs rejected; allocation exhaustion cannot persist (3.211002ms)
+✔ independent migration: SQLite snapshot includes live WAL and legacy rows; backup stays v1 (6.443345ms)
+✔ independent migration: second (directory) flush failure preserves both v1 markers; reopen succeeds (7.127746ms)
+✔ independent migration: schema variant and version mismatch reject before backup (6.427883ms)
+✔ independent migration: transaction failure rolls both version markers back (4.509499ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 378.011903

@@ -1,0 +1,5 @@
+PASS actor vs explicit author-world predicates: location and private variable, 2 execute/2 cancel
+PASS ordinary model operation cannot select world predicate mode
+PASS ended and rebuilt relations distinct IDs/lifecycle in model, knowledge, search
+PASS author and schedule notices survive reopening; hidden author-only notices absent in player projection: 0
+PASS stale player checkpoint rejected after fork and for NPC; first-scene query recall retained
